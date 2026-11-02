@@ -1,78 +1,140 @@
-> ⚠️ **Don't click Fork!**
-> 
-> This is a GitHub Template repo. If you want to use this for a plugin, [use this template][new-repo] to make a new repo!
->
-> ![image](https://github.com/goatcorp/SamplePlugin/assets/16760685/d9732094-e1ed-4769-a70b-58ed2b92580c)
+# ReflavorRP
 
-# SamplePlugin
+A [Dalamud](https://github.com/goatcorp/Dalamud) plugin for FINAL FANTASY XIV that lets you roleplay the way you would on SA-MP or GTA World, while everyone else still sees normal FFXIV RP.
 
-[![Use This Template badge](https://img.shields.io/badge/Use%20This%20Template-0?logo=github&labelColor=grey)][new-repo]
+It does three things:
 
+1. **Outgoing:** you type `/me`, `/s`, `/low`, `/w`, `/b` and `*actions*` like on GTA World, and it's sent as FFXIV style `/say` and `/em` lines.
+2. **Incoming:** chat you receive is shown GTA World style (`Name says:`, purple `* Name` emotes, grey OOC, darker text for people further away). This only changes what **you** see.
+3. **Accents:** regex based find and replace on your speech, with a couple of built-in templates.
 
-Simple example plugin for Dalamud.
+## Commands
 
-This is not designed to be the simplest possible example, but it is also not designed to cover everything you might want to do. For more detailed questions, come ask in [the Discord](https://discord.gg/holdshift).
+`/reflavor` opens the settings window. `/reflavorrp` and `/textrp` do the same.
 
-## Main Points
+## Outgoing: what you type vs. what gets sent
 
-* Simple functional plugin
-  * Slash command
-  * Main UI
-  * Settings UI
-  * Image loading
-  * Plugin json
-* Simple, slightly-improved plugin configuration handling
-* Project organization
-  * Copies all necessary plugin files to the output directory
-    * Does not copy dependencies that are provided by dalamud
-    * Output directory can be zipped directly and have exactly what is required
-  * Hides data files from visual studio to reduce clutter
-    * Also allows having data files in different paths than VS would usually allow if done in the IDE directly
+Speech gets quotes, a capital letter and ending punctuation. `*actions*` are kept as narration.
 
+| You type | Sent as | Others see |
+| --- | --- | --- |
+| `hello there` (Say channel active) | `/say "Hello there."` | Legaia: "Hello there." |
+| `/say oi *laughs*` | `/say "Oi." laughs.` | Legaia: "Oi." laughs. |
+| `*coughs*` | `/em coughs.` | Legaia coughs. |
+| `/me sighs. "yeah, right"` | `/em sighs. "Yeah, right."` | Legaia sighs. "Yeah, right." |
+| `/em` / `/ame` | same as `/me` | |
+| `/s help me` | `/em shouts, "Help me!"` | Legaia shouts, "Help me!" |
+| `/s *slams the table* stop` | `/em slams the table. Shouts, "Stop!"` | Legaia slams the table. Shouts, "Stop!" |
+| `/low come here` | `/em whispers, "Come here."` | Legaia whispers, "Come here." |
+| `/w Ziero did you just?` | `/em whispers to Ziero, "Did you just?"` | Legaia whispers to Ziero, "Did you just?" |
+| `/b brb` | `/say (( brb ))` | Legaia: (( brb )) |
 
-The intention is less that any of this is used directly in other projects, and more to show how similar things can be done.
+The verbs (`shouts`, `whispers`, `whispers to`) can be changed in the settings. Typing text without a slash only gets converted while the Say channel is active; Party, FC, linkshells etc. are left alone.
 
-## How To Use
+## Incoming: how chat looks to you
 
-### Getting Started
+With everything turned on, this is roughly what the chat log turns into. Speech uses your normal text color, emotes are purple and OOC is grey:
 
-To begin, [clone this template repository][new-repo] to your own GitHub account. This will automatically bring in everything you need to get a jumpstart on development. You do not need to fork this repository unless you intend to contribute modifications to it.
+```math
+\begin{array}{l}
+\textsf{Legaia says: Do you seek adventure?} \\
+\textsf{Legaia says: Hey. }{\color{#C2A2DA}\textsf{*she laughs.*}} \\
+{\color{#C2A2DA}\textsf{* Anastasia smiles. }}\textsf{"Not a thing to apologize for."}{\color{#C2A2DA}\textsf{ She leans back.}} \\
+\textsf{Ziero shouts: Help!} \\
+{\color{#9A9A9A}\textsf{(( Legaia: brb ))}}
+\end{array}
+```
 
-Be sure to also check out the [Dalamud Developer Docs][dalamud-docs] for helpful information about building your own plugin. The Developer Docs includes helpful information about all sorts of things, including [how to submit][submit] your newly-created plugin to the official repository. Assuming you use this template repository, the provided project build configuration and license are already chosen to make everything a breeze.
+| Received | Shown as |
+| --- | --- |
+| `Legaia: "Do you seek adventure?"` | Legaia says: Do you seek adventure? |
+| `Legaia: "Oi." ri.` / `Legaia: *waves* hey` | speech plus the action in purple between `*` |
+| `Anastasia smiles. "Not a thing to apologize for."` (emote) | `* Anastasia …` in purple, the quoted part in normal color |
+| `Legaia: brb` (no quotes, no `*actions*`) | `(( Legaia: brb ))` in grey, treated as OOC |
+| `Ziero: Help!` (shout / yell) | Ziero shouts: Help! |
 
-[new-repo]: https://github.com/new?template_name=SamplePlugin&template_owner=goatcorp
-[dalamud-docs]: https://dalamud.dev
-[submit]: https://dalamud.dev/plugin-publishing/submission
+Some other details:
 
-### Prerequisites
+- The world name is dropped from names (`Legaia Lindblum` instead of `Legaia Lindblum ⬥Balmung`). The name stays clickable.
+- Any kind of quote counts (`"` `“` `”` `„` `«` `»` …), including mismatched ones and posts split over several messages.
+- **Distance fade:** the further away the speaker, the darker the line, like GTA World. Your own lines are never faded.
 
-SamplePlugin assumes all the following prerequisites are met:
+  | Distance (yalms) | < 4 | 4–8 | 8–12 | 12–16 | 16+ |
+  | --- | --- | --- | --- | --- | --- |
+  | Brightness | 100% | 87% | 74% | 61% | 48% |
 
-* XIVLauncher, FINAL FANTASY XIV, and Dalamud have all been installed and the game has been run with Dalamud at least once.
-* XIVLauncher is installed to its default directories and configurations.
-  * If a custom path is required for Dalamud's dev directory, it must be set with the `DALAMUD_HOME` environment variable.
-* A .NET Core 8 SDK has been installed and configured, or is otherwise available. (In most cases, the IDE will take care of this.)
+## Accents
 
-### Building
+Accents only touch what you **say**: quoted speech, `/s`, `/low`, `/w`. Actions, narration and `/b` are never changed.
 
-1. Open up `SamplePlugin.sln` in your C# editor of choice (likely [Visual Studio](https://visualstudio.microsoft.com) or [JetBrains Rider](https://www.jetbrains.com/rider/)).
-2. Build the solution. By default, this will build a `Debug` build, but you can switch to `Release` in your IDE.
-3. The resulting plugin can be found at `SamplePlugin/bin/x64/Debug/SamplePlugin.dll` (or `Release` if appropriate.)
+An accent is a list of rules (regex pattern → replacement) applied in order. Patterns are case insensitive and the replacement keeps the case of what it replaced, so `Sorry` becomes `Thorry` and `STOP` becomes `THTOP`. Use `$1`, `$2` for capture groups.
 
-### Activating in-game
+Two templates are built in:
 
-1. Launch the game and use `/xlsettings` in chat or `xlsettings` in the Dalamud Console to open up the Dalamud settings.
-    * In here, go to `Experimental`, and add the full path to the `SamplePlugin.dll` to the list of Dev Plugin Locations.
-2. Next, use `/xlplugins` (chat) or `xlplugins` (console) to open up the Plugin Installer.
-    * In here, go to `Dev Tools > Installed Dev Plugins`, and the `SamplePlugin` should be visible. Enable it.
-3. You should now be able to use `/pmycommand` (chat) or `pmycommand` (console)!
+| Template | Rules | Example |
+| --- | --- | --- |
+| Frontal lisp | `s(?!h)` → `th`, `z` → `th`, `c(?=[eiy])` → `th` | "Thorry, I really love thith nithe plathe." |
+| Uwufication | `[rl]` → `w`, `n([aeiou])` → `ny$1`, `ove` → `uv` | "Sowwy, I weawwy wuv this nyice pwace." |
 
-Note that you only need to add it to the Dev Plugin Locations once (Step 1); it is preserved afterwards. You can disable, enable, or load your plugin on startup through the Plugin Installer.
+Templates can't be edited, but **Copy active accent** turns one into your own accent that you can change. Custom accents are saved in the plugin config.
 
-### Reconfiguring for your own uses
+## Compatibility and known issues
 
-Replace all references to `SamplePlugin` in all the files and filenames with your desired name, then start building the plugin of your dreams. You'll figure it out 😁
+- **Chat 2 and other chat plugins.** With *Rewrite full lines* on, the original line is hidden and a new one is printed in the **Echo** channel (the only way to get `Name says:`). Plugins that draw their own chat window may show duplicates or miss lines, and chat tabs that filter by channel will treat these lines as Echo. Turn *Rewrite full lines* off and the plugin only recolors and cleans up the original message instead.
+- **ChatProximity.** Both plugins fade text by distance. On Say, Emote, Shout and Yell this plugin's colors win; other channels are left to ChatProximity. If they fight, turn one of them off.
+- **Item links, auto-translate, map links.** Messages containing those are not restyled, since rebuilding them would break the links.
+- **`/s` and `/me`.** In FFXIV `/s` is short for `/say`; with conversion on it means *shout* instead. `/me` normally plays an emote animation; the *Replace the /me emote* setting decides which one you get.
+- **Macros** go through the same conversion as typed commands.
+- **Split posts with straight quotes.** The middle part of a long post that only closes a quote (`...and that's why." she said`) can't be told apart from one that opens it, so speech and action get swapped for that part. Curly quotes (`”`) are detected correctly.
+- **Distance fade** only works for players currently loaded around you; anyone else is shown at full brightness.
+- **Everyone else sees normal chat.** Incoming styling is local only.
 
-Dalamud will load the JSON file (by default, `SamplePlugin/SamplePlugin.json`) next to your DLL and use it for metadata, including the description for your plugin in the Plugin Installer. Make sure to update this with information relevant to _your_ plugin!
+## Installing
 
-All participation in this repository is governed by our [Code of Conduct](https://dalamud.dev/code-of-conduct). If you used AI tooling at any point, review the [AI Usage Policy](https://dalamud.dev/plugin-publishing/ai-policy) and disclose your level of AI use. Entirely AI-generated submissions will be rejected, and undisclosed AI use may result in a ban.
+ReflavorRP isn't in the official plugin list, so it's installed from a custom repository:
+
+1. In game, open `/xlsettings` → **Experimental**.
+2. Under **Custom Plugin Repositories**, add this URL, tick **Enabled** and save:
+   ```
+   https://raw.githubusercontent.com/Day-OS/ffxiv-sampstyled-rp/master/repo.json
+   ```
+3. Open `/xlplugins`, search for **ReflavorRP** and install it.
+
+## Releasing
+
+Push a version tag and the [release workflow](.github/workflows/release.yml) does the rest:
+
+```
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+It builds the plugin with that version, creates a GitHub release with `latest.zip`, and updates `repo.json` on `master` so installed copies pick up the update.
+
+## Building
+
+You need XIVLauncher with Dalamud (run the game with it at least once) and the .NET 10 SDK.
+
+1. Open `ReflavorRP.slnx` in Visual Studio, Rider or VS Code, or run `dotnet build` in the repo folder.
+2. The plugin ends up in `ReflavorRP/bin/x64/Debug/ReflavorRP.dll`.
+3. In game, open `/xlsettings` → **Experimental** and add the full path to that DLL under **Dev Plugin Locations**.
+4. Open `/xlplugins` → **Dev Tools** → **Installed Dev Plugins** and enable ReflavorRP.
+
+Watch out for the output folder: building with the `x64` platform writes to `bin/x64/Debug`, building as `Any CPU` writes to `bin/Debug`. Point Dalamud at the one your IDE actually builds, or rebuilds won't show up in game.
+
+## Project layout
+
+| File | What it does |
+| --- | --- |
+| `Plugin.cs` | Entry point, commands, and the hook on the game's command execution. Dalamud's command API only receives commands the game doesn't know, so overriding `/me` and `/say` needs a hook. |
+| `RpFormatter.cs` | Outgoing conversion (GTA World input → FFXIV RP line). |
+| `ChatStyler.cs` | Incoming chat restyling and distance fade. |
+| `Accent.cs` | Accent rules and the built-in templates. |
+| `Configuration.cs` | Saved settings. |
+| `Windows/ConfigWindow.cs` | Settings window. |
+
+## Credits and license
+
+The project skeleton (project file, build setup, plugin entry point layout) started from goatcorp's [SamplePlugin](https://github.com/goatcorp/SamplePlugin) template. The chat conversion, chat styling and accent code is ReflavorRP's own.
+
+Licensed under the [Mozilla Public License 2.0](LICENSE.md).

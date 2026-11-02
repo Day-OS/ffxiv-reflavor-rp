@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Dalamud.NET.Sdk/15.0.0">
+  <PropertyGroup>
+    <Version>0.0.0.1</Version>
+    <!-- Manifest fields (see https://github.com/goatcorp/DalamudPackager/blob/827d88dc/DalamudPackager/DalamudPackager.cs#L420) -->
+    <Author>Day-OS</Author>
+    <Name>ReflavorRP</Name>
+    <Punchline>SA-MP / GTA World style RP chat commands for FFXIV.</Punchline>
+    <Description>Type RP the way you would on SA-MP or GTA World (/me, /s, /low, /w, /b, *actions*) and it is rewritten into FFXIV RP style emotes and speech.</Description>
+    <RepoUrl>https://github.com/Day-OS/ffxiv-sampstyled-rp</RepoUrl>
+    <Tags>rp;roleplay;chat;emote</Tags>
+  </PropertyGroup>
+</Project>
