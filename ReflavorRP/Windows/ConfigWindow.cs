@@ -128,6 +128,8 @@ public class ConfigWindow : Window
                      "Turns /me, /s, /low, /w, /b and plain Say into FFXIV RP style lines.");
         DrawCheckbox("Replace the /me emote", config.ReplaceMeEmote, v => config.ReplaceMeEmote = v,
                      "When on, /me works like /em. When off, /me plays the game's own emote.");
+        DrawCheckbox("Replace /s with RP shout", config.ReplaceSCommand, v => config.ReplaceSCommand = v,
+                     "When on, /s narrates a shout through /em. When off, /s is left untouched as the game's Say shorthand.");
 
         Section("Verbs");
         DrawTextInput("/s", config.VerbShout, v => config.VerbShout = v,

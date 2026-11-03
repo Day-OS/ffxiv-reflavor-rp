@@ -14,6 +14,7 @@ public class Configuration : IPluginConfiguration
     // outgoing
     public bool ConversionEnabled { get; set; } = true;
     public bool ReplaceMeEmote { get; set; } = true;
+    public bool ReplaceSCommand { get; set; } = true;
     public string VerbShout { get; set; } = "shouts";
     public string VerbLow { get; set; } = "whispers";
     public string VerbWhisper { get; set; } = "whispers to";

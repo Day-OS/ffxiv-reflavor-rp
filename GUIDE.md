@@ -14,6 +14,7 @@ The **Disable plugin** button at the top pauses all outgoing conversion, accents
 | --- | --- | --- |
 | Outgoing | Conversion enabled | Formats messages you send. |
 | Outgoing | Replace the /me emote | Makes `/me` write an action instead of playing the game's emote animation. |
+| Outgoing | Replace /s with RP shout | Makes `/s` narrate a shout. Turn off to leave `/s` as the game's native Say shorthand. |
 | Incoming | GTA World style chat | Restyles Say, custom emotes, eligible Shout/Yell and both directions of Tell. |
 | Incoming | Darker text for distant players | Dims nearby players' Say and emote lines according to distance. |
 | Accents | Active accents | Applies selected speech transformations in order. Leave empty to start without an accent. |
@@ -74,7 +75,7 @@ Your outgoing `/say brb` becomes quoted speech automatically. Use `/b brb` when 
 
 **`/low` and `/w` describe a whisper in a local emote. They do not send a private message.** Use `/tell` for privacy.
 
-Likewise, ReflavorRP's `/s` describes shouting through `/em`; it does not send to the Shout channel. This overrides FFXIV's usual `/s` shorthand for Say while conversion is enabled.
+Likewise, ReflavorRP's `/s` describes shouting through `/em`; it does not send to the Shout channel. This overrides FFXIV's usual `/s` shorthand for Say while conversion and **Replace /s with RP shout** are enabled. Turn that setting off under **Outgoing** to leave `/s` untouched. Use `/say` when you want formatted dialogue with the replacement disabled.
 
 The generated words `shouts`, `whispers` and `whispers to` can be changed under **Outgoing → Verbs**.
 

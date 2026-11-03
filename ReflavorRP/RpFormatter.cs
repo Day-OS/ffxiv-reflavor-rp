@@ -70,7 +70,7 @@ public static class RpFormatter
             case "/ame":
             case "/em":
                 return "/em " + Emote(args, accent);
-            case "/s":
+            case "/s" when config.ReplaceSCommand:
                 return "/em " + Speech(args, config.VerbShout, accent, '!');
             case "/low":
                 return "/em " + Speech(args, config.VerbLow, accent);

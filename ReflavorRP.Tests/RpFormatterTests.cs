@@ -87,4 +87,17 @@ public class RpFormatterTests
         Assert.Null(RpFormatter.Rewrite("hello", 2, config));
         Assert.Equal("/party Test Player waves.", RpFormatter.Rewrite("/party /me waves", 2, config, "Test Player"));
     }
+
+    [Theory]
+    [InlineData("/s help")]
+    [InlineData("/S help")]
+    [InlineData("/party /s help")]
+    [InlineData("/tell First Last@World /s help")]
+    public void LeavesSCommandUntouchedWhenReplacementIsDisabled(string command)
+    {
+        var config = new Configuration { ReplaceSCommand = false };
+
+        Assert.Null(RpFormatter.Rewrite(command, 1, config, "Test Player"));
+        Assert.Equal("/say \"Hello.\"", RpFormatter.Rewrite("/say hello", 1, config));
+    }
 }
