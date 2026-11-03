@@ -15,6 +15,7 @@ public class ChatStylerTests : IDisposable
     private readonly Mock<IChatGui> chat = new();
     private readonly Mock<IObjectTable> objects = new();
     private readonly Mock<IPlayerCharacter> localPlayer = new();
+    private readonly Mock<Action<IChatMessage>> showChatBubble = new();
     private readonly Configuration config = new();
     private readonly ChatStyler styler;
     private readonly ITestOutputHelper output;
@@ -30,7 +31,7 @@ public class ChatStylerTests : IDisposable
         objects.SetupGet(o => o.LocalPlayer).Returns(localPlayer.Object);
         objects.SetupGet(o => o.PlayerObjects).Returns(Array.Empty<IPlayerCharacter>());
         chat.Setup(c => c.Print(It.IsAny<XivChatEntry>())).Callback<XivChatEntry>(entry => printed = entry);
-        styler = new ChatStyler(chat.Object, objects.Object, config, Mock.Of<IPluginLog>());
+        styler = new ChatStyler(chat.Object, objects.Object, config, Mock.Of<IPluginLog>(), showChatBubble.Object);
     }
 
     public void Dispose() => styler.Dispose();
@@ -62,6 +63,7 @@ public class ChatStylerTests : IDisposable
         Assert.Equal(XivChatType.Echo, printed.Type);
         Assert.Equal(42, printed.Timestamp);
         Assert.Equal(input, message.Object.Message.TextValue);
+        showChatBubble.Verify(show => show(message.Object), Times.Once);
         message.Verify(m => m.PreventOriginal(), Times.Once);
         chat.Verify(c => c.Print(It.IsAny<XivChatEntry>()), Times.Once);
         output.WriteLine($"Entrada: {input}");
@@ -163,6 +165,7 @@ public class ChatStylerTests : IDisposable
         var message = Receive(kind, "WTS item");
 
         Assert.Null(printed);
+        showChatBubble.Verify(show => show(It.IsAny<IChatMessage>()), Times.Never);
         message.Verify(m => m.PreventOriginal(), Times.Never);
     }
 
@@ -174,6 +177,7 @@ public class ChatStylerTests : IDisposable
         var message = Receive(kind, "Hello!");
 
         Assert.Null(printed);
+        showChatBubble.Verify(show => show(It.IsAny<IChatMessage>()), Times.Never);
         message.Verify(m => m.PreventOriginal(), Times.Never);
         objects.VerifyGet(o => o.LocalPlayer, Times.Never);
     }
@@ -196,6 +200,7 @@ public class ChatStylerTests : IDisposable
 
         Assert.Null(printed);
         Assert.Same(original, message.Object.Message);
+        showChatBubble.Verify(show => show(It.IsAny<IChatMessage>()), Times.Never);
         message.Verify(m => m.PreventOriginal(), Times.Never);
     }
 

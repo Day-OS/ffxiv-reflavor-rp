@@ -1,5 +1,9 @@
 ﻿using System;
+using System.Linq;
+using Dalamud.Game.Chat;
 using Dalamud.Game.Command;
+using Dalamud.Game.Text;
+using Dalamud.Game.Text.SeStringHandling.Payloads;
 using Dalamud.Hooking;
 using Dalamud.Interface.Windowing;
 using Dalamud.IoC;
@@ -7,6 +11,7 @@ using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
 using FFXIVClientStructs.FFXIV.Client.System.String;
 using FFXIVClientStructs.FFXIV.Client.UI;
+using FFXIVClientStructs.FFXIV.Client.UI.Misc;
 using FFXIVClientStructs.FFXIV.Client.UI.Shell;
 using FFXIVClientStructs.FFXIV.Component.Shell;
 using ReflavorRP.Windows;
@@ -39,7 +44,7 @@ public sealed unsafe class Plugin : IDalamudPlugin
 
         configWindow = new ConfigWindow(config);
         windows.AddWindow(configWindow);
-        chatStyler = new ChatStyler(ChatGui, ObjectTable, config, Log);
+        chatStyler = new ChatStyler(ChatGui, ObjectTable, config, Log, ShowChatBubble);
 
         commandHook = GameInterop.HookFromAddress<ShellCommandModule.Delegates.ExecuteCommandInner>(
             (nint)ShellCommandModule.MemberFunctionPointers.ExecuteCommandInner, OnExecuteCommand);
@@ -71,6 +76,27 @@ public sealed unsafe class Plugin : IDalamudPlugin
 
         commandHook.Dispose();
         chatStyler.Dispose();
+    }
+
+    private static void ShowChatBubble(IChatMessage message)
+    {
+        var logModule = RaptureLogModule.Instance();
+        if (logModule == null)
+            return;
+
+        var player = message.Sender.Payloads.OfType<PlayerPayload>().FirstOrDefault();
+        // Outgoing Tell identifies its recipient; unlinked public senders are ourselves.
+        var isLocalPlayer = message.LogKind == XivChatType.TellOutgoing || player == null;
+        var senderName = isLocalPlayer ? ObjectTable.LocalPlayer?.Name.TextValue : player!.PlayerName;
+        if (string.IsNullOrWhiteSpace(senderName))
+            return;
+
+        using var sender = new Utf8String();
+        using var text = new Utf8String();
+        sender.SetString(senderName);
+        text.SetString(message.Message.Encode());
+        logModule->ShowMiniTalkPlayer((ushort)message.LogKind, &sender, &text,
+            (ushort)(player?.World.RowId ?? 0), isLocalPlayer);
     }
 
     private void OnExecuteCommand(ShellCommandModule* self, Utf8String* command, UIModule* uiModule)

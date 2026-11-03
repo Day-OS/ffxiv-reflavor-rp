@@ -33,13 +33,16 @@ public sealed class ChatStyler : IDisposable
     private readonly IObjectTable objectTable;
     private readonly Configuration config;
     private readonly IPluginLog log;
+    private readonly Action<IChatMessage> showChatBubble;
 
-    public ChatStyler(IChatGui chatGui, IObjectTable objectTable, Configuration config, IPluginLog log)
+    public ChatStyler(IChatGui chatGui, IObjectTable objectTable, Configuration config, IPluginLog log,
+        Action<IChatMessage> showChatBubble)
     {
         this.chatGui = chatGui;
         this.objectTable = objectTable;
         this.config = config;
         this.log = log;
+        this.showChatBubble = showChatBubble;
         chatGui.ChatMessage += OnChatMessage;
     }
 
@@ -158,6 +161,8 @@ public sealed class ChatStyler : IDisposable
 
         var line = BuildLine(pieces, style, isTell, authorName,
             new ReadOnlySeString(prefix.ToArray()), fade);
+        // Suppressing native PrintMessage also skips its overhead chat bubble.
+        showChatBubble(msg);
         msg.PreventOriginal();
         chatGui.Print(new XivChatEntry
         {
