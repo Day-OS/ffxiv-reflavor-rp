@@ -7,6 +7,7 @@
     "Description": "Type RP the way you would on SA-MP or GTA World (/me, /s, /low, /w, /b, *actions*) and it is rewritten into FFXIV RP style emotes and speech.",
     "ApplicableVersion": "any",
     "RepoUrl": "https://github.com/Day-OS/ffxiv-sampstyled-rp",
+    "IconUrl": "https://raw.githubusercontent.com/Day-OS/ffxiv-sampstyled-rp/master/Data/icon.png",
     "Tags": [
       "rp",
       "roleplay",

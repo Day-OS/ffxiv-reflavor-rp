@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 128 128" role="img" aria-labelledby="title">
+  <title id="title">ReflavorRP</title>
+  <defs>
+    <linearGradient id="background" x1="16" y1="8" x2="112" y2="128" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#382749"/>
+      <stop offset="1" stop-color="#19171F"/>
+    </linearGradient>
+    <linearGradient id="outline" x1="28" y1="28" x2="100" y2="104" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#D7BDEB"/>
+      <stop offset="1" stop-color="#AA7CD1"/>
+    </linearGradient>
+  </defs>
+  <rect x="2" y="2" width="124" height="124" rx="30" fill="url(#background)"/>
+  <rect x="3" y="3" width="122" height="122" rx="29" fill="none" stroke="#C2A2DA" stroke-opacity="0.2" stroke-width="2"/>
+  <path d="M39 30h50a14 14 0 0 1 14 14v27a14 14 0 0 1-14 14H63L40 102V85h-1a14 14 0 0 1-14-14V44a14 14 0 0 1 14-14Z"
+        fill="#AA7CD1" fill-opacity="0.1" stroke="url(#outline)" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M64 42v30M51 49.5l26 15M51 64.5l26-15" fill="none" stroke="#C2A2DA" stroke-width="4.5" stroke-linecap="round"/>
+</svg>

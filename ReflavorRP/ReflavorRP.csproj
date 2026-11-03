@@ -8,6 +8,7 @@
     <Punchline>SA-MP / GTA World style RP chat commands for FFXIV.</Punchline>
     <Description>Type RP the way you would on SA-MP or GTA World (/me, /s, /low, /w, /b, *actions*) and it is rewritten into FFXIV RP style emotes and speech.</Description>
     <RepoUrl>https://github.com/Day-OS/ffxiv-sampstyled-rp</RepoUrl>
+    <IconUrl>https://raw.githubusercontent.com/Day-OS/ffxiv-sampstyled-rp/master/Data/icon.png</IconUrl>
     <Tags>rp;roleplay;chat;emote</Tags>
   </PropertyGroup>
   <ItemGroup>
