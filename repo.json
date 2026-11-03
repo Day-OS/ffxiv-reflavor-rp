@@ -3,11 +3,10 @@
     "Author": "Day-OS",
     "Name": "ReflavorRP",
     "InternalName": "ReflavorRP",
-    "AssemblyVersion": "0.1.1.0",
+    "AssemblyVersion": "0.1.2.0",
     "Description": "Type RP the way you would on SA-MP or GTA World (/me, /s, /low, /w, /b, *actions*) and it is rewritten into FFXIV RP style emotes and speech.",
     "ApplicableVersion": "any",
     "RepoUrl": "https://github.com/Day-OS/ffxiv-sampstyled-rp",
-    "IconUrl": "https://raw.githubusercontent.com/Day-OS/ffxiv-sampstyled-rp/master/Data/icon.png",
     "Tags": [
       "rp",
       "roleplay",
@@ -19,11 +18,12 @@
     "LoadSync": false,
     "CanUnloadAsync": false,
     "LoadPriority": 0,
+    "IconUrl": "https://raw.githubusercontent.com/Day-OS/ffxiv-sampstyled-rp/master/Data/icon.png",
     "Punchline": "SA-MP / GTA World style RP chat commands for FFXIV.",
     "AcceptsFeedback": true,
-    "DownloadLinkInstall": "https://github.com/Day-OS/ffxiv-reflavor-rp/releases/download/v0.1.1/latest.zip",
-    "DownloadLinkUpdate": "https://github.com/Day-OS/ffxiv-reflavor-rp/releases/download/v0.1.1/latest.zip",
-    "DownloadLinkTesting": "https://github.com/Day-OS/ffxiv-reflavor-rp/releases/download/v0.1.1/latest.zip",
-    "LastUpdate": 1793743143
+    "DownloadLinkInstall": "https://github.com/Day-OS/ffxiv-reflavor-rp/releases/download/v0.1.2/latest.zip",
+    "DownloadLinkUpdate": "https://github.com/Day-OS/ffxiv-reflavor-rp/releases/download/v0.1.2/latest.zip",
+    "DownloadLinkTesting": "https://github.com/Day-OS/ffxiv-reflavor-rp/releases/download/v0.1.2/latest.zip",
+    "LastUpdate": 1793746722
   }
 ]
