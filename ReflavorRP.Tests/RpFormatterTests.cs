@@ -60,6 +60,21 @@ public class RpFormatterTests
         Assert.Null(RpFormatter.Rewrite(text, 1, new Configuration(), "Test Player"));
     }
 
+    [Theory]
+    [InlineData("/say \"I *really* mean it\"", "/say \"I *really* mean it.\"")]
+    [InlineData("/say \"*really*\"", "/say \"*really*.\"")]
+    [InlineData("/say \"I *really* mean it\" *waves*", "/say \"I *really* mean it.\" waves.")]
+    [InlineData("/say *nods* \"I *really* mean it\" *waves*", "/say nods. \"I *really* mean it.\" waves.")]
+    [InlineData("/s \"I *really* mean it\"", "/em shouts, \"I *really* mean it!\"")]
+    [InlineData("/low \"I *really* mean it\"", "/em whispers, \"I *really* mean it.\"")]
+    [InlineData("/w Friend \"I *really* mean it\"", "/em whispers to Friend, \"I *really* mean it.\"")]
+    [InlineData("/me smiles. \"I *really* mean it\"", "/em smiles. \"I *really* mean it.\"")]
+    [InlineData("/tell First Last@World \"I *really* mean it\" *waves*", "/tell First Last@World \"I *really* mean it.\" waves.")]
+    public void KeepsEmphasisInsideQuotedSpeech(string command, string expected)
+    {
+        Assert.Equal(expected, RpFormatter.Rewrite(command, 1, new Configuration(), "Test Player"));
+    }
+
     [Fact]
     public void RoutedAccentsOnlyChangeSpeech()
     {

@@ -40,6 +40,8 @@ The previews below illustrate text and colors against a dark background. They do
 
 Use `/say` for dialogue, `/me` for actions, and `*asterisks*` for actions inside a spoken message. For dialogue inside an emote, use straight double quotes.
 
+Inside double quotes, asterisks are emphasis, not an action. For example, `/say "I *really* mean it" *waves*` keeps `*really*` in the speech color and shows `waves.` as a purple action. Keep emphasis inside the quotes and actions outside them.
+
 | Case | Type this | FFXIV command sent |
 | --- | --- | --- |
 | Simple dialogue | `/say hello there` | `/say "Hello there."` |

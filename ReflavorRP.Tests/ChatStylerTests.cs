@@ -43,6 +43,9 @@ public class ChatStylerTests : IDisposable
     [InlineData(XivChatType.Say, "Hello **waves****smiles** again", "Raih’li says: Hello *waves* *smiles* again")]
     [InlineData(XivChatType.Say, "“Hello!” **waves**", "Raih’li says: Hello! *waves*")]
     [InlineData(XivChatType.Say, "“*Hello!*”", "Raih’li says: *Hello!*")]
+    [InlineData(XivChatType.Say, "\"I *really* mean it.\" waves.", "Raih’li says: I *really* mean it. *waves.*")]
+    [InlineData(XivChatType.CustomEmote, "smiles. \"I *really* mean it.\"", "* Raih’li smiles. \"I *really* mean it.\"")]
+    [InlineData(XivChatType.TellIncoming, "\"I *really* mean it.\" waves.", "[TELL:Raih’li] Raih’li says: I *really* mean it. *waves.*")]
     [InlineData(XivChatType.Say, "brb", "(( Raih’li: brb ))")]
     [InlineData(XivChatType.CustomEmote, "**waves. “ Hi. ”**", "* Raih’li waves. \"Hi.\"")]
     [InlineData(XivChatType.CustomEmote, "waves.  “Hi.”  nods.", "* Raih’li waves. \"Hi.\" nods.")]
@@ -73,14 +76,14 @@ public class ChatStylerTests : IDisposable
     [Fact]
     public void TellPrefixIsOrangeAndActionRestoresSpeechColor()
     {
-        Receive(XivChatType.TellOutgoing, "“Hi.” *waves* “Bye.”");
+        Receive(XivChatType.TellOutgoing, "“I *really* mean it.” *waves* “Bye.”");
 
         var expected = new Builder();
         expected.PushColorRgba(0xFF, 0xA6, 0x4D, 0xFF);
         expected.Append("[TELL:Raih’li] ");
         expected.PopColor();
         expected.PushColorRgba(0xE6, 0xE6, 0xE6, 0xFF);
-        expected.Append("Legaia says: Hi. ");
+        expected.Append("Legaia says: I *really* mean it. ");
         expected.PushColorRgba(0xC2, 0xA2, 0xDA, 0xFF);
         expected.Append("*waves*");
         expected.PopColor();

@@ -8,7 +8,8 @@ public static class RpFormatter
     private const int SayChatType = 1; // RaptureShellModule.ChatType
 
     private static readonly Regex QuoteRegex = new("\"([^\"]*)\"", RegexOptions.Compiled);
-    private static readonly Regex ActionRegex = new(@"\*([^*]+)\*", RegexOptions.Compiled);
+    // Match quoted speech first so asterisks inside it remain literal emphasis.
+    private static readonly Regex SpeechTokenRegex = new(@"""[^""]*""|\*(?<action>[^*]+)\*", RegexOptions.Compiled);
     private static readonly Regex RoutedCommandRegex = new(
         @"^/(?:(?:party|p|freecompany|fc|alliance|a|reply|r|linkshell|l|cwlinkshell|cwl|(?:linkshell|l|cwlinkshell|cwl)[1-8])\s+|(?:tell|t)\s+(?:""[^""]+""|<[^<>]+>|[^\s/]+[ \t]+[^\s/]+)\s+)(?=\S)",
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
@@ -63,7 +64,7 @@ public static class RpFormatter
         {
             case "/say":
                 // nothing said, just an action
-                if (ActionRegex.Replace(args, "").Trim() == "")
+                if (SpeechTokenRegex.Replace(args, match => match.Groups["action"].Success ? "" : match.Value).Trim() == "")
                     return "/em " + Speech(args, null, accent);
                 return "/say " + Speech(args, null, accent, capitalize: false);
             case "/me" when config.ReplaceMeEmote:
@@ -99,17 +100,27 @@ public static class RpFormatter
     // hey *waves* how are you? -> shouts, "Hey!" Waves. "How are you?"
     private static string Speech(string text, string? verb, Accent? accent, char end = '.', bool capitalize = true)
     {
-        // the regex has a capture group so Split keeps the actions: even = speech, odd = action
-        var pieces = ActionRegex.Split(text);
+        var pieces = new List<(bool Action, string Text)>();
+        var previousEnd = 0;
+        foreach (Match token in SpeechTokenRegex.Matches(text))
+        {
+            if (!token.Groups["action"].Success)
+                continue;
+
+            pieces.Add((false, text[previousEnd..token.Index]));
+            pieces.Add((true, token.Groups["action"].Value));
+            previousEnd = token.Index + token.Length;
+        }
+        pieces.Add((false, text[previousEnd..]));
         var result = new List<string>();
 
-        for (var i = 0; i < pieces.Length; i++)
+        foreach (var (isAction, content) in pieces)
         {
-            var piece = pieces[i].Trim();
+            var piece = content.Trim();
             if (piece == "")
                 continue;
 
-            if (i % 2 == 1)
+            if (isAction)
             {
                 piece = Punctuate(piece);
             }
