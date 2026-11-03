@@ -50,7 +50,7 @@ public sealed class ChatStyler : IDisposable
 
     private void OnChatMessage(IHandleableChatMessage msg)
     {
-        if (!config.StyleIncomingChat || msg.IsHandled)
+        if (!config.Enabled || !config.StyleIncomingChat || msg.IsHandled)
             return;
 
         if (msg.LogKind is not (XivChatType.Say or XivChatType.CustomEmote or XivChatType.Shout

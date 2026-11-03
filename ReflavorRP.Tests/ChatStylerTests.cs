@@ -179,12 +179,14 @@ public class ChatStylerTests : IDisposable
     }
 
     [Theory]
+    [InlineData("plugin-disabled")]
     [InlineData("disabled")]
     [InlineData("handled")]
     [InlineData("empty")]
     [InlineData("item-link")]
     public void LeavesProtectedMessagesUntouched(string reason)
     {
+        config.Enabled = reason != "plugin-disabled";
         config.StyleIncomingChat = reason != "disabled";
         var text = reason == "empty" ? "  " : "“Hello!”";
         SeString original = text;
@@ -195,6 +197,20 @@ public class ChatStylerTests : IDisposable
         Assert.Null(printed);
         Assert.Same(original, message.Object.Message);
         message.Verify(m => m.PreventOriginal(), Times.Never);
+    }
+
+    [Fact]
+    public void ResumesStylingWhenPluginIsEnabledAgain()
+    {
+        config.Enabled = false;
+        var message = Receive(XivChatType.TellIncoming, "Hello!");
+        Assert.Null(printed);
+        message.Verify(m => m.PreventOriginal(), Times.Never);
+
+        config.Enabled = true;
+        Receive(XivChatType.TellIncoming, "Hello!");
+        Assert.NotNull(printed);
+        Assert.Equal("[TELL:Raih’li] Raih’li says: Hello!", printed.Message.TextValue);
     }
 
     [Fact]

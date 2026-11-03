@@ -72,6 +72,15 @@ public class ConfigWindow : Window
     {
         DrawHeader();
 
+        if (ImGui.Button(config.Enabled ? "Disable plugin" : "Enable plugin", new Vector2(-1, 0)))
+        {
+            config.Enabled = !config.Enabled;
+            config.Save();
+        }
+        if (!config.Enabled)
+            ImGui.TextWrapped("All chat changes are paused. Your settings are preserved.");
+        ImGui.Spacing();
+
         if (!ImGui.BeginTabBar("tabs"))
             return;
 

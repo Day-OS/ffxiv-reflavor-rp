@@ -78,7 +78,7 @@ public sealed unsafe class Plugin : IDalamudPlugin
         string? rewritten = null;
         try
         {
-            if (config.ConversionEnabled)
+            if (config.Enabled && config.ConversionEnabled)
                 rewritten = RpFormatter.Rewrite(command->ToString(), RaptureShellModule.Instance()->ChatType, config,
                     ObjectTable.LocalPlayer?.Name.TextValue);
         }

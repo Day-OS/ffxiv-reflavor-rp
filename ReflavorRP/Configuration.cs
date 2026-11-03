@@ -9,6 +9,7 @@ namespace ReflavorRP;
 public class Configuration : IPluginConfiguration
 {
     public int Version { get; set; } = 0;
+    public bool Enabled { get; set; } = true;
 
     // outgoing
     public bool ConversionEnabled { get; set; } = true;

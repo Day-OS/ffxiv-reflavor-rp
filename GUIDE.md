@@ -8,6 +8,8 @@ This guide uses **Legaia Lindblum** as your character and **Raih'li Tia** as you
 
 Follow the [installation instructions](README.md#installing), then open `/reflavor`.
 
+The **Disable plugin** button at the top pauses all outgoing conversion, accents and incoming styling. Click **Enable plugin** to resume with your saved settings. You can still open the window and change settings while the plugin is paused.
+
 | Tab | Setting | What it does |
 | --- | --- | --- |
 | Outgoing | Conversion enabled | Formats messages you send. |
