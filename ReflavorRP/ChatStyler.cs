@@ -25,6 +25,8 @@ public sealed class ChatStyler : IDisposable
     private static readonly byte[] SpeechColor = [0xE6, 0xE6, 0xE6];
     private static readonly byte[] OocColor = [0xAF, 0xAF, 0xAF];
 
+    private const uint RoleplayingStatus = 22; // "Role-playing" in the OnlineStatus sheet, set by /roleplaying
+
     private readonly IChatGui chatGui;
     private readonly IObjectTable objectTable;
     private readonly Configuration config;
@@ -61,7 +63,8 @@ public sealed class ChatStyler : IDisposable
             return;
 
         var full = config.RewriteFullChatLines;
-        var fade = config.FadeByDistance ? DistanceFade(msg.Sender) : 1f;
+        var speaker = FindSpeaker(msg.Sender);
+        var fade = config.FadeByDistance ? DistanceFade(speaker) : 1f;
         var name = WithoutWorld(msg.Sender);
         var sender = new ReadOnlySeString(name.Encode());
         var b = new LuminaSeStringBuilder();
@@ -87,6 +90,11 @@ public sealed class ChatStyler : IDisposable
                 AppendSay(b, text, fade);
                 b.PopColor();
                 break;
+
+            // shouts reach the whole zone, so only style RP ones and leave "WTS..." and the like alone.
+            // a shouter too far away to be loaded can't be checked, so they count as not RP
+            case XivChatType.Shout or XivChatType.Yell when !IsRoleplaying(speaker):
+                return;
 
             case XivChatType.Shout:
             case XivChatType.Yell:
@@ -211,18 +219,28 @@ public sealed class ChatStyler : IDisposable
         return new SeString(payloads);
     }
 
-    private float DistanceFade(SeString sender)
+    // null when they're too far away to be loaded
+    private IPlayerCharacter? FindSpeaker(SeString sender)
     {
         // our own lines have no player link
         var player = sender.Payloads.OfType<PlayerPayload>().FirstOrDefault();
-        var me = objectTable.LocalPlayer;
-        if (player == null || me == null)
-            return 1f;
+        if (player == null)
+            return objectTable.LocalPlayer;
 
-        var speaker = objectTable.PlayerObjects
+        return objectTable.PlayerObjects
             .OfType<IPlayerCharacter>()
             .FirstOrDefault(p => p.Name.TextValue == player.PlayerName && p.HomeWorld.RowId == player.World.RowId);
-        if (speaker == null)
+    }
+
+    private static bool IsRoleplaying(IPlayerCharacter? speaker)
+    {
+        return speaker?.OnlineStatus.RowId == RoleplayingStatus;
+    }
+
+    private float DistanceFade(IPlayerCharacter? speaker)
+    {
+        var me = objectTable.LocalPlayer;
+        if (speaker == null || me == null)
             return 1f;
 
         var distance = Vector3.Distance(me.Position, speaker.Position);
