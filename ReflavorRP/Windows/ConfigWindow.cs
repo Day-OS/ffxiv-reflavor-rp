@@ -149,6 +149,20 @@ public class ConfigWindow : Window
         ImGui.TextWrapped("Always replaces styled messages with local Echo lines. Chat 2, ChatProximity and other chat plugins are unsupported; there is no compatibility mode.");
         DrawCheckbox("Darker text for distant players", config.FadeByDistance, v => config.FadeByDistance = v,
                      "The further away the speaker, the darker their line.");
+
+        Section("Important words");
+        DrawCheckbox("Highlight my character's name", config.HighlightCharacterName, v => config.HighlightCharacterName = v,
+                     "Highlights your first and last name separately in gold when mentioned in a message.");
+        DrawCheckbox("Play a sound on highlights", config.PlayHighlightSound, v => config.PlayHighlightSound = v,
+                     "Plays <se.1> once per received message with a highlighted term. Your own messages stay silent.");
+        ImGui.TextWrapped("Custom words or phrases, one per line. Also matches parts of words, without case sensitivity.");
+        var highlightWords = config.HighlightWords;
+        if (ImGui.InputTextMultiline("##highlightWords", ref highlightWords, 4096,
+                new Vector2(-1, 90 * ImGuiHelpers.GlobalScale)))
+        {
+            config.HighlightWords = highlightWords;
+            config.Save();
+        }
     }
 
     private void DrawAccentsTab()

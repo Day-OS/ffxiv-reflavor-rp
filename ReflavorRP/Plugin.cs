@@ -44,7 +44,8 @@ public sealed unsafe class Plugin : IDalamudPlugin
 
         configWindow = new ConfigWindow(config);
         windows.AddWindow(configWindow);
-        chatStyler = new ChatStyler(ChatGui, ObjectTable, config, Log, ShowChatBubble);
+        chatStyler = new ChatStyler(ChatGui, ObjectTable, config, Log, ShowChatBubble,
+            () => UIGlobals.PlayChatSoundEffect(1));
 
         commandHook = GameInterop.HookFromAddress<ShellCommandModule.Delegates.ExecuteCommandInner>(
             (nint)ShellCommandModule.MemberFunctionPointers.ExecuteCommandInner, OnExecuteCommand);

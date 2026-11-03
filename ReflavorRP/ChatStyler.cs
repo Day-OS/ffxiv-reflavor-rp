@@ -26,6 +26,7 @@ public sealed class ChatStyler : IDisposable
     private static readonly byte[] SpeechColor = [0xE6, 0xE6, 0xE6];
     private static readonly byte[] OocColor = [0xAF, 0xAF, 0xAF];
     private static readonly byte[] PrefixColor = [0xFF, 0xA6, 0x4D];
+    private static readonly byte[] HighlightColor = [0xFF, 0xD1, 0x66];
 
     private enum LineStyle { Speech, Emote, Shout, Ooc }
 
@@ -34,15 +35,17 @@ public sealed class ChatStyler : IDisposable
     private readonly Configuration config;
     private readonly IPluginLog log;
     private readonly Action<IChatMessage> showChatBubble;
+    private readonly Action playHighlightSound;
 
     public ChatStyler(IChatGui chatGui, IObjectTable objectTable, Configuration config, IPluginLog log,
-        Action<IChatMessage> showChatBubble)
+        Action<IChatMessage> showChatBubble, Action playHighlightSound)
     {
         this.chatGui = chatGui;
         this.objectTable = objectTable;
         this.config = config;
         this.log = log;
         this.showChatBubble = showChatBubble;
+        this.playHighlightSound = playHighlightSound;
         chatGui.ChatMessage += OnChatMessage;
     }
 
@@ -86,9 +89,10 @@ public sealed class ChatStyler : IDisposable
 
         var senderName = WithoutWorld(msg.Sender);
         var authorName = senderName;
+        var localName = config.HighlightCharacterName || config.PlayHighlightSound || msg.LogKind == XivChatType.TellOutgoing
+            ? objectTable.LocalPlayer?.Name.TextValue : null;
         if (msg.LogKind == XivChatType.TellOutgoing)
         {
-            var localName = objectTable.LocalPlayer?.Name.TextValue;
             authorName = string.IsNullOrWhiteSpace(localName) ? "Your character" : localName;
         }
         var prefix = new LuminaSeStringBuilder();
@@ -159,8 +163,20 @@ public sealed class ChatStyler : IDisposable
             pieces.RemoveAll(piece => piece.Text == "");
         }
 
+        var words = config.HighlightWords.Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries).ToList();
+        if (config.HighlightCharacterName && !string.IsNullOrWhiteSpace(localName))
+            words.AddRange(localName.Split(' ', StringSplitOptions.RemoveEmptyEntries));
+        Regex? highlights = null;
+        if (words.Count > 0)
+        {
+            var alternatives = words.Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderByDescending(word => word.Length).Select(Regex.Escape);
+            highlights = new Regex(string.Join("|", alternatives),
+                RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        }
+
         var line = BuildLine(pieces, style, isTell, authorName,
-            new ReadOnlySeString(prefix.ToArray()), fade);
+            new ReadOnlySeString(prefix.ToArray()), fade, highlights);
         // Suppressing native PrintMessage also skips its overhead chat bubble.
         showChatBubble(msg);
         msg.PreventOriginal();
@@ -170,11 +186,16 @@ public sealed class ChatStyler : IDisposable
             Timestamp = msg.Timestamp,
             Message = line,
         });
+
+        var isOwnMessage = msg.LogKind == XivChatType.TellOutgoing || senderName.TextValue == localName;
+        if (config.PlayHighlightSound && !isOwnMessage && highlights != null &&
+            pieces.Any(piece => highlights.IsMatch(piece.Text)))
+            playHighlightSound();
     }
 
     // Render the style chosen by the caller using the same parsed text.
     private static SeString BuildLine(IReadOnlyList<(bool Speech, string Text)> pieces, LineStyle style,
-        bool isTell, SeString authorName, ReadOnlySeString prefix, float fade)
+        bool isTell, SeString authorName, ReadOnlySeString prefix, float fade, Regex? highlights)
     {
         var b = new LuminaSeStringBuilder();
         var sender = new ReadOnlySeString(authorName.Encode());
@@ -189,7 +210,9 @@ public sealed class ChatStyler : IDisposable
         if (style == LineStyle.Ooc)
         {
             PushColor(b, OocColor, fade);
-            b.Append("(( ").Append(sender).Append(": " + pieces[0].Text + " ))");
+            b.Append("(( ").Append(sender).Append(": ");
+            AppendHighlighted(b, pieces[0].Text, highlights, fade);
+            b.Append(" ))");
             b.PopColor();
             return SeString.Parse(b.ToArray());
         }
@@ -216,23 +239,47 @@ public sealed class ChatStyler : IDisposable
             if (isEmote && isSpeechPiece)
             {
                 PushColor(b, SpeechColor, fade);
-                b.Append("\"" + piece + "\"");
+                b.Append("\"");
+                AppendHighlighted(b, piece, highlights, fade);
+                b.Append("\"");
                 b.PopColor();
             }
             else if (!isEmote && !isSpeechPiece)
             {
                 PushColor(b, EmoteColor, fade);
-                b.Append("*" + piece + "*");
+                b.Append("*");
+                AppendHighlighted(b, piece, highlights, fade);
+                b.Append("*");
                 b.PopColor();
             }
             else
             {
-                b.Append(piece);
+                AppendHighlighted(b, piece, highlights, fade);
             }
         }
 
         b.PopColor();
         return SeString.Parse(b.ToArray());
+    }
+
+    private static void AppendHighlighted(LuminaSeStringBuilder builder, string text, Regex? highlights, float fade)
+    {
+        if (highlights == null)
+        {
+            builder.Append(text);
+            return;
+        }
+
+        var previousEnd = 0;
+        foreach (Match match in highlights.Matches(text))
+        {
+            builder.Append(text[previousEnd..match.Index]);
+            PushColor(builder, HighlightColor, fade);
+            builder.Append(match.Value);
+            builder.PopColor();
+            previousEnd = match.Index + match.Length;
+        }
+        builder.Append(text[previousEnd..]);
     }
 
     private static bool StartsWithActor(string text, string? authorName)

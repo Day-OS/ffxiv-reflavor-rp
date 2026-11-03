@@ -22,6 +22,9 @@ public class Configuration : IPluginConfiguration
     // incoming
     public bool StyleIncomingChat { get; set; } = true;
     public bool FadeByDistance { get; set; } = true;
+    public bool HighlightCharacterName { get; set; } = true;
+    public string HighlightWords { get; set; } = "";
+    public bool PlayHighlightSound { get; set; } = false;
 
     // accents
     public List<string> ActiveAccents { get; set; } = []; // run in this order

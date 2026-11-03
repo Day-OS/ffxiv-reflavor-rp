@@ -16,7 +16,8 @@ public class ChatStylerTests : IDisposable
     private readonly Mock<IObjectTable> objects = new();
     private readonly Mock<IPlayerCharacter> localPlayer = new();
     private readonly Mock<Action<IChatMessage>> showChatBubble = new();
-    private readonly Configuration config = new();
+    private readonly Mock<Action> playHighlightSound = new();
+    private readonly Configuration config = new() { HighlightCharacterName = false };
     private readonly ChatStyler styler;
     private readonly ITestOutputHelper output;
     private XivChatEntry? printed;
@@ -31,7 +32,8 @@ public class ChatStylerTests : IDisposable
         objects.SetupGet(o => o.LocalPlayer).Returns(localPlayer.Object);
         objects.SetupGet(o => o.PlayerObjects).Returns(Array.Empty<IPlayerCharacter>());
         chat.Setup(c => c.Print(It.IsAny<XivChatEntry>())).Callback<XivChatEntry>(entry => printed = entry);
-        styler = new ChatStyler(chat.Object, objects.Object, config, Mock.Of<IPluginLog>(), showChatBubble.Object);
+        styler = new ChatStyler(chat.Object, objects.Object, config, Mock.Of<IPluginLog>(),
+            showChatBubble.Object, playHighlightSound.Object);
     }
 
     public void Dispose() => styler.Dispose();
@@ -114,11 +116,129 @@ public class ChatStylerTests : IDisposable
     [Fact]
     public void OocIsGrey()
     {
+        config.HighlightWords = "brb";
         Receive(XivChatType.Say, "(( brb ))");
 
         var expected = new Builder();
         expected.PushColorRgba(0xAF, 0xAF, 0xAF, 0xFF);
-        expected.Append("(( Raih’li: brb ))");
+        expected.Append("(( Raih’li: ");
+        expected.PushColorRgba(0xFF, 0xD1, 0x66, 0xFF);
+        expected.Append("brb");
+        expected.PopColor();
+        expected.Append(" ))");
+        expected.PopColor();
+        Assert.NotNull(printed);
+        Assert.Equal(expected.ToArray(), printed.Message.Encode());
+    }
+
+    [Fact]
+    public void HighlightsFirstAndLastNameInsideWordsIgnoringCase()
+    {
+        config.HighlightCharacterName = true;
+        config.PlayHighlightSound = true;
+        localPlayer.SetupGet(p => p.Name).Returns((SeString)"Legaia Lindblum");
+        Receive(XivChatType.Say, "\"Hey LEGAIA, Lindblum's here. Legaian and preLindblumpost.\"");
+
+        var expected = new Builder();
+        expected.PushColorRgba(0xE6, 0xE6, 0xE6, 0xFF);
+        expected.Append("Raih’li says: Hey ");
+        expected.PushColorRgba(0xFF, 0xD1, 0x66, 0xFF);
+        expected.Append("LEGAIA");
+        expected.PopColor();
+        expected.Append(", ");
+        expected.PushColorRgba(0xFF, 0xD1, 0x66, 0xFF);
+        expected.Append("Lindblum");
+        expected.PopColor();
+        expected.Append("'s here. ");
+        expected.PushColorRgba(0xFF, 0xD1, 0x66, 0xFF);
+        expected.Append("Legaia");
+        expected.PopColor();
+        expected.Append("n and pre");
+        expected.PushColorRgba(0xFF, 0xD1, 0x66, 0xFF);
+        expected.Append("Lindblum");
+        expected.PopColor();
+        expected.Append("post.");
+        expected.PopColor();
+        Assert.NotNull(printed);
+        Assert.Equal(expected.ToArray(), printed.Message.Encode());
+        playHighlightSound.Verify(play => play(), Times.Once);
+    }
+
+    [Theory]
+    [InlineData(XivChatType.TellIncoming, "menu menus MENU", "Raih’li", true, 1)]
+    [InlineData(XivChatType.Say, "\"A menu.\" offers menus.", "Raih’li", true, 1)]
+    [InlineData(XivChatType.CustomEmote, "offers a menu.", "Raih’li", true, 1)]
+    [InlineData(XivChatType.TellIncoming, "Hello!", "Raih’li", true, 0)]
+    [InlineData(XivChatType.TellIncoming, "menu", "Raih’li", false, 0)]
+    [InlineData(XivChatType.TellOutgoing, "menu", "Raih’li", true, 0)]
+    [InlineData(XivChatType.Say, "\"A menu.\"", "Legaia", true, 0)]
+    public void PlaysHighlightSoundOnceForMatchingReceivedMessages(
+        XivChatType kind, string text, string sender, bool soundEnabled, int expectedCalls)
+    {
+        config.HighlightWords = "menu";
+        config.PlayHighlightSound = soundEnabled;
+        Receive(kind, text, sender);
+
+        playHighlightSound.Verify(play => play(), Times.Exactly(expectedCalls));
+    }
+
+    [Fact]
+    public void CustomHighlightsRestoreSpeechAndActionColorsAndMatchLiteralPhrases()
+    {
+        config.HighlightWords = " menu \nfish\nfish and chips\nC++\n[RP]\nMENU\n\n";
+        Receive(XivChatType.TellIncoming, "\"The menu is ready.\" offers fish and chips. \"C++ is [RP]. Other menus.\"");
+
+        var expected = new Builder();
+        expected.PushColorRgba(0xFF, 0xA6, 0x4D, 0xFF);
+        expected.Append("[TELL:Raih’li] ");
+        expected.PopColor();
+        expected.PushColorRgba(0xE6, 0xE6, 0xE6, 0xFF);
+        expected.Append("Raih’li says: The ");
+        expected.PushColorRgba(0xFF, 0xD1, 0x66, 0xFF);
+        expected.Append("menu");
+        expected.PopColor();
+        expected.Append(" is ready. ");
+        expected.PushColorRgba(0xC2, 0xA2, 0xDA, 0xFF);
+        expected.Append("*offers ");
+        expected.PushColorRgba(0xFF, 0xD1, 0x66, 0xFF);
+        expected.Append("fish and chips");
+        expected.PopColor();
+        expected.Append(".*");
+        expected.PopColor();
+        expected.Append(" ");
+        expected.PushColorRgba(0xFF, 0xD1, 0x66, 0xFF);
+        expected.Append("C++");
+        expected.PopColor();
+        expected.Append(" is ");
+        expected.PushColorRgba(0xFF, 0xD1, 0x66, 0xFF);
+        expected.Append("[RP]");
+        expected.PopColor();
+        expected.Append(". Other ");
+        expected.PushColorRgba(0xFF, 0xD1, 0x66, 0xFF);
+        expected.Append("menu");
+        expected.PopColor();
+        expected.Append("s.");
+        expected.PopColor();
+        Assert.NotNull(printed);
+        Assert.Equal(expected.ToArray(), printed.Message.Encode());
+    }
+
+    [Theory]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    public void LeavesNameMentionsUncoloredWhenDisabledOrLocalPlayerIsMissing(bool highlightName, bool hasLocalPlayer)
+    {
+        config.HighlightCharacterName = highlightName;
+        if (!hasLocalPlayer)
+            objects.SetupGet(o => o.LocalPlayer).Returns((IPlayerCharacter?)null);
+        Receive(XivChatType.TellIncoming, "\"Hello Legaia.\"");
+
+        var expected = new Builder();
+        expected.PushColorRgba(0xFF, 0xA6, 0x4D, 0xFF);
+        expected.Append("[TELL:Raih’li] ");
+        expected.PopColor();
+        expected.PushColorRgba(0xE6, 0xE6, 0xE6, 0xFF);
+        expected.Append("Raih’li says: Hello Legaia.");
         expected.PopColor();
         Assert.NotNull(printed);
         Assert.Equal(expected.ToArray(), printed.Message.Encode());
@@ -130,6 +250,7 @@ public class ChatStylerTests : IDisposable
     [InlineData(XivChatType.TellOutgoing, 1)]
     public void KeepsClickablePlayerLinks(XivChatType kind, int expectedLinks)
     {
+        config.HighlightWords = "Raih’li";
         var sender = new Builder();
         sender.PushLinkCharacter("Raih’li", 75);
         sender.Append("Raih’li@World");
@@ -193,6 +314,8 @@ public class ChatStylerTests : IDisposable
     [InlineData("item-link")]
     public void LeavesProtectedMessagesUntouched(string reason)
     {
+        config.PlayHighlightSound = true;
+        config.HighlightWords = "Hello";
         config.Enabled = reason != "plugin-disabled";
         config.StyleIncomingChat = reason != "disabled";
         var text = reason == "empty" ? "  " : "“Hello!”";
@@ -203,6 +326,7 @@ public class ChatStylerTests : IDisposable
 
         Assert.Null(printed);
         Assert.Same(original, message.Object.Message);
+        playHighlightSound.Verify(play => play(), Times.Never);
         showChatBubble.Verify(show => show(It.IsAny<IChatMessage>()), Times.Never);
         message.Verify(m => m.PreventOriginal(), Times.Never);
     }

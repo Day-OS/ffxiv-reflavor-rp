@@ -17,6 +17,7 @@ The **Disable plugin** button at the top pauses all outgoing conversion, accents
 | Outgoing | Replace /s with RP shout | Makes `/s` narrate a shout. Turn off to leave `/s` as the game's native Say shorthand. |
 | Incoming | GTA World style chat | Restyles Say, custom emotes, eligible Shout/Yell and both directions of Tell. |
 | Incoming | Darker text for distant players | Dims nearby players' Say and emote lines according to distance. |
+| Incoming | Highlight my character's name | Highlights mentions of your first and last name separately in gold. |
 | Accents | Active accents | Applies selected speech transformations in order. Leave empty to start without an accent. |
 
 **Enable Echo in your chat tab's filters.** Restyled messages appear as local Echo lines, including Tells. Nothing is sent to other players by incoming styling.
@@ -33,6 +34,7 @@ The **Disable plugin** button at the top pauses all outgoing conversion, accents
 | Purple `#C2A2DA` | Actions and narration. |
 | Grey `#AFAFAF` | Out of character, or OOC. |
 | Orange `#FFA64D` | The Tell contact prefix. |
+| Gold `#FFD166` | Your character's name and custom important words mentioned in a message. |
 
 The previews below illustrate text and colors against a dark background. They do not reproduce the game's exact font, timestamps or UI. Names in images are static; eligible names in game retain their native player links.
 
@@ -170,6 +172,24 @@ With distance fading enabled, Say and custom emotes from loaded players get dark
 Your own lines remain at full brightness. Tell, Shout and Yell never fade. Players who cannot be found among the loaded characters are not distance-faded.
 
 Messages containing item links, map links or auto-translate are kept in their native format to preserve those features. This is expected.
+
+## Important words and name mentions
+
+Under **Incoming → Important words**, enable **Highlight my character's name** to highlight your first and last name independently. For a character named Legaia Lindblum, both `Legaia` and `Lindblum` are recognized, regardless of capitalization.
+
+Add custom words or phrases to the box, one per line:
+
+```text
+Dancing Daisy
+menu
+Rai
+```
+
+Matches use gold (`#FFD166`) in message bodies, including dialogue, narration and OOC. The surrounding speech or action color resumes after each match. Sender labels and Tell contact prefixes keep their existing colors and player links. Highlights only affect your local styled chat, not outgoing messages or overhead bubbles.
+
+Matches also work inside words: `Rai` highlights that part of `Raih`, and `menu` highlights that part of `menus`. This applies to character names and custom entries. Phrases match the text you entered, and punctuation such as `C++` is treated literally. If phrases overlap, the longer match at the same position takes priority. Distance fading also applies to highlights. Turn off the name option or remove custom entries to stop those highlights.
+
+Enable **Play a sound on highlights** in the same section to hear the game's `<se.1>` notification when a received message contains a name or custom term. It plays once per matching message, even with several matches. Your own messages stay silent. This option is off by default and only applies to messages processed by incoming styling.
 
 ## Quick fixes
 
