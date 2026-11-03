@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="310" viewBox="0 0 900 310" role="img" aria-labelledby="title" xml:space="preserve">
+  <title id="title">Public chat: dialogue, inline action, emote, quoted dialogue, consecutive actions and OOC</title>
+  <rect width="900" height="310" rx="12" fill="#19171F"/>
+  <text x="24" y="30" fill="#9C79B9" font-family="Segoe UI, Arial, sans-serif" font-size="12" letter-spacing="2">YOUR LOCAL CHAT · PUBLIC MESSAGES</text>
+  <g font-family="Segoe UI, Arial, sans-serif" font-size="18" fill="#E6E6E6">
+    <text x="24" y="70">Legaia Lindblum says: Hello there.</text>
+    <text x="24" y="108">Legaia Lindblum says: Hello. <tspan fill="#C2A2DA">*waves.*</tspan></text>
+    <text x="24" y="146" fill="#C2A2DA">* Legaia Lindblum waves.</text>
+    <text x="24" y="184" fill="#C2A2DA">* Legaia Lindblum smiles. <tspan fill="#E6E6E6">"Good morning."</tspan></text>
+    <text x="24" y="222">Legaia Lindblum says: Hello. <tspan fill="#C2A2DA">*waves. smiles.*</tspan> Take a seat.</text>
+    <text x="24" y="270" fill="#AFAFAF">(( Legaia Lindblum: one moment ))</text>
+  </g>
+</svg>

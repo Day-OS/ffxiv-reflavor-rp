@@ -10,4 +10,7 @@
     <RepoUrl>https://github.com/Day-OS/ffxiv-sampstyled-rp</RepoUrl>
     <Tags>rp;roleplay;chat;emote</Tags>
   </PropertyGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="..\Data\logo.png" LogicalName="ReflavorRP.Logo.png" />
+  </ItemGroup>
 </Project>

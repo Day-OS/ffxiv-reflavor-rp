@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Numerics;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface.Utility;
 using Dalamud.Interface.Windowing;
 
 namespace ReflavorRP.Windows;
@@ -97,9 +98,16 @@ public class ConfigWindow : Window
 
     private void DrawHeader()
     {
-        ImGui.TextColored(Purple, "ReflavorRP");
-        ImGui.SameLine();
-        ImGui.TextColored(Muted, "SA-MP / GTA World style RP chat");
+        var logo = Plugin.TextureProvider.GetFromManifestResource(typeof(ConfigWindow).Assembly, "ReflavorRP.Logo.png");
+        if (logo.TryGetWrap(out var texture, out _))
+        {
+            var width = Math.Min(ImGui.GetContentRegionAvail().X, 540f * ImGuiHelpers.GlobalScale);
+            ImGui.Image(texture.Handle, new Vector2(width, width * texture.Height / texture.Width));
+        }
+        else
+        {
+            ImGui.TextColored(Purple, "ReflavorRP");
+        }
         ImGui.Spacing();
     }
 
@@ -125,9 +133,9 @@ public class ConfigWindow : Window
     {
         Section("What you see");
         DrawCheckbox("GTA World style chat", config.StyleIncomingChat, v => config.StyleIncomingChat = v,
-                     "Restyles Say, Emote, Shout and Yell. Only changes what you see, nothing is sent.");
-        DrawCheckbox("Rewrite full lines", config.RewriteFullChatLines, v => config.RewriteFullChatLines = v,
-                     "Needed for \"Name says:\" and \"* Name\". Turn off if it clashes with Chat 2.");
+                     "Restyles Say, Emote, Shout, Yell and incoming/outgoing Tell. Only changes what you see, nothing is sent.");
+        ImGui.TextColored(ErrorColor, "Incompatible with other chat plugins.");
+        ImGui.TextWrapped("Always replaces styled messages with local Echo lines. Chat 2, ChatProximity and other chat plugins are unsupported; there is no compatibility mode.");
         DrawCheckbox("Darker text for distant players", config.FadeByDistance, v => config.FadeByDistance = v,
                      "The further away the speaker, the darker their line.");
     }

@@ -11,31 +11,35 @@ using Dalamud.Game.Text.SeStringHandling.Payloads;
 using Dalamud.Plugin.Services;
 using Lumina.Text.ReadOnly;
 using LuminaSeStringBuilder = Lumina.Text.SeStringBuilder;
+using OnlineStatusFlags = FFXIVClientStructs.FFXIV.Client.UI.Info.InfoProxyCommonList.CharacterData.OnlineStatus;
 
 namespace ReflavorRP;
 
 // GTA World look for chat we receive. Only changes what we see, nothing gets sent.
 public sealed class ChatStyler : IDisposable
 {
-    private static readonly char[] QuoteChars = ['"', '“', '”', '„', '‟', '″', '＂', '«', '»'];
+    private static readonly char[] QuoteChars = ['"', '“', '”', '„', '‟', '″', '\uff02', '«', '»'];
     private static readonly Regex OocRegex = new(@"^\(\((.*)\)\)$", RegexOptions.Compiled);
-    private static readonly Regex ActionRegex = new(@"\*([^*]+)\*", RegexOptions.Compiled);
+    private static readonly Regex ActionRegex = new(@"(?<markers>\*+)(?<action>[^*]+)\k<markers>", RegexOptions.Compiled);
 
     private static readonly byte[] EmoteColor = [0xC2, 0xA2, 0xDA];
     private static readonly byte[] SpeechColor = [0xE6, 0xE6, 0xE6];
     private static readonly byte[] OocColor = [0xAF, 0xAF, 0xAF];
+    private static readonly byte[] PrefixColor = [0xFF, 0xA6, 0x4D];
 
-    private const uint RoleplayingStatus = 22; // "Role-playing" in the OnlineStatus sheet, set by /roleplaying
+    private enum LineStyle { Speech, Emote, Shout, Ooc }
 
     private readonly IChatGui chatGui;
     private readonly IObjectTable objectTable;
     private readonly Configuration config;
+    private readonly IPluginLog log;
 
-    public ChatStyler(IChatGui chatGui, IObjectTable objectTable, Configuration config)
+    public ChatStyler(IChatGui chatGui, IObjectTable objectTable, Configuration config, IPluginLog log)
     {
         this.chatGui = chatGui;
         this.objectTable = objectTable;
         this.config = config;
+        this.log = log;
         chatGui.ChatMessage += OnChatMessage;
     }
 
@@ -49,12 +53,15 @@ public sealed class ChatStyler : IDisposable
         if (!config.StyleIncomingChat || msg.IsHandled)
             return;
 
+        if (msg.LogKind is not (XivChatType.Say or XivChatType.CustomEmote or XivChatType.Shout
+            or XivChatType.Yell or XivChatType.TellIncoming or XivChatType.TellOutgoing))
+            return;
+
         // we rebuild from plain text, so skip anything with item links, auto-translate etc.
-        // colors are fine to lose (ChatProximity adds those)
         var unsupported = msg.Message.Payloads.FirstOrDefault(p => p is not (TextPayload or UIForegroundPayload or UIGlowPayload or RawPayload));
         if (unsupported != null)
         {
-            Plugin.Log.Debug($"Skipping {msg.LogKind} message with a {unsupported.Type} payload");
+            log.Debug($"Skipping {msg.LogKind} message with a {unsupported.Type} payload");
             return;
         }
 
@@ -62,70 +69,95 @@ public sealed class ChatStyler : IDisposable
         if (text == "")
             return;
 
-        var full = config.RewriteFullChatLines;
-        var speaker = FindSpeaker(msg.Sender);
-        var fade = config.FadeByDistance ? DistanceFade(speaker) : 1f;
-        var name = WithoutWorld(msg.Sender);
-        var sender = new ReadOnlySeString(name.Encode());
-        var b = new LuminaSeStringBuilder();
+        var isTell = msg.LogKind is XivChatType.TellIncoming or XivChatType.TellOutgoing;
+        var isShout = msg.LogKind is XivChatType.Shout or XivChatType.Yell;
+        IPlayerCharacter? nearbySpeaker = null;
+        if (isShout || (!isTell && config.FadeByDistance))
+            nearbySpeaker = FindSpeaker(msg.Sender);
 
-        switch (msg.LogKind)
-        {
-            // no quotes and no *actions*, probably OOC
-            case XivChatType.Say when text.IndexOfAny(QuoteChars) < 0 && !ActionRegex.IsMatch(text):
-                var ooc = OocRegex.Match(text);
-                var oocText = ooc.Success ? ooc.Groups[1].Value.Trim() : text;
-                PushColor(b, OocColor, fade);
-                if (full)
-                    b.Append("(( ").Append(sender).Append(": " + oocText + " ))");
-                else
-                    b.Append("(( " + oocText + " ))");
-                b.PopColor();
-                break;
-
-            case XivChatType.Say:
-                PushColor(b, SpeechColor, fade);
-                if (full)
-                    b.Append(sender).Append(" says: ");
-                AppendSay(b, text, fade);
-                b.PopColor();
-                break;
-
-            // shouts reach the whole zone, so only style RP ones and leave "WTS..." and the like alone.
-            // a shouter too far away to be loaded can't be checked, so they count as not RP
-            case XivChatType.Shout or XivChatType.Yell when !IsRoleplaying(speaker):
-                return;
-
-            case XivChatType.Shout:
-            case XivChatType.Yell:
-                PushColor(b, SpeechColor, fade);
-                if (full)
-                    b.Append(sender).Append(" shouts: ");
-                b.Append(Unquote(text));
-                b.PopColor();
-                break;
-
-            case XivChatType.CustomEmote:
-                PushColor(b, EmoteColor, fade);
-                if (full)
-                    b.Append("* ").Append(sender).Append(" ");
-                AppendEmote(b, text, fade);
-                b.PopColor();
-                break;
-
-            default:
-                return;
-        }
-
-        var line = SeString.Parse(b.ToArray());
-        if (!full)
-        {
-            msg.Sender = name;
-            msg.Message = line;
+        // Only restyle RP shouts; their brightness does not depend on distance.
+        if (isShout && !IsRoleplaying(nearbySpeaker))
             return;
+
+        var fade = !isTell && !isShout && config.FadeByDistance ? DistanceFade(nearbySpeaker) : 1f;
+
+        var senderName = WithoutWorld(msg.Sender);
+        var authorName = senderName;
+        if (msg.LogKind == XivChatType.TellOutgoing)
+        {
+            var localName = objectTable.LocalPlayer?.Name.TextValue;
+            authorName = string.IsNullOrWhiteSpace(localName) ? "Your character" : localName;
+        }
+        var prefix = new LuminaSeStringBuilder();
+        if (isTell)
+            prefix.Append("[TELL:").Append(new ReadOnlySeString(senderName.Encode())).Append("] ");
+
+        var ooc = OocRegex.Match(text);
+        var pieces = new List<(bool Speech, string Text)>();
+        var quotedParts = text.Split(QuoteChars);
+        var hasQuotes = quotedParts.Length > 1;
+        var actions = ActionRegex.Matches(text);
+        var startsWithNarration = isTell && (text.StartsWith('*') || StartsWithActor(text, authorName.TextValue));
+
+        if (hasQuotes)
+        {
+            var quoteCount = quotedParts.Length - 1;
+            var firstQuote = text[text.IndexOfAny(QuoteChars)];
+            // An unmatched closing curly quote means the post starts mid-speech.
+            var inSpeech = firstQuote == '”' && quoteCount % 2 != 0;
+            foreach (var part in quotedParts)
+            {
+                pieces.Add((Speech: inSpeech, Text: part));
+                inSpeech = !inSpeech;
+            }
+        }
+        else if (msg.LogKind == XivChatType.CustomEmote || startsWithNarration)
+        {
+            pieces.Add((Speech: false, Text: text));
+        }
+        else
+        {
+            var previousEnd = 0;
+            foreach (Match action in actions)
+            {
+                pieces.Add((Speech: true, Text: text[previousEnd..action.Index]));
+                pieces.Add((Speech: false, Text: action.Groups["action"].Value));
+                previousEnd = action.Index + action.Length;
+            }
+            pieces.Add((Speech: true, Text: text[previousEnd..]));
         }
 
-        // can't change how the game lays out "Name: text", so hide it and print our own line as echo
+        var first = pieces.FirstOrDefault(p => !string.IsNullOrWhiteSpace(p.Text));
+        var style = msg.LogKind switch
+        {
+            XivChatType.CustomEmote => LineStyle.Emote,
+            XivChatType.Shout or XivChatType.Yell => LineStyle.Shout,
+            _ when isTell && ooc.Success => LineStyle.Ooc,
+            _ when isTell && (startsWithNarration || (first.Text != null && !first.Speech)) => LineStyle.Emote,
+            _ when !isTell && !hasQuotes && actions.Count == 0 => LineStyle.Ooc,
+            _ => LineStyle.Speech,
+        };
+        if (style == LineStyle.Ooc)
+        {
+            var body = ooc.Success ? ooc.Groups[1].Value.Trim() : text;
+            pieces.Clear();
+            pieces.Add((Speech: false, Text: body));
+        }
+        else
+        {
+            for (var i = 0; i < pieces.Count; i++)
+            {
+                var (speech, piece) = pieces[i];
+                piece = piece.Trim();
+                if (!speech)
+                    piece = piece.Trim('*').Trim();
+                pieces[i] = (speech, piece);
+            }
+            pieces.RemoveAll(piece => piece.Text == "");
+        }
+
+        var line = BuildLine(pieces, style, isTell, authorName,
+            new ReadOnlySeString(prefix.ToArray()), fade);
         msg.PreventOriginal();
         chatGui.Print(new XivChatEntry
         {
@@ -135,74 +167,93 @@ public sealed class ChatStyler : IDisposable
         });
     }
 
-    private static void AppendEmote(LuminaSeStringBuilder b, string text, float fade)
+    // Render the style chosen by the caller using the same parsed text.
+    private static SeString BuildLine(IReadOnlyList<(bool Speech, string Text)> pieces, LineStyle style,
+        bool isTell, SeString authorName, ReadOnlySeString prefix, float fade)
     {
-        foreach (var (speech, piece) in SplitSpeech(text))
+        var b = new LuminaSeStringBuilder();
+        var sender = new ReadOnlySeString(authorName.Encode());
+        var isEmote = style == LineStyle.Emote;
+        if (!prefix.IsEmpty)
         {
-            if (!speech)
-            {
-                b.Append(piece);
-                continue;
-            }
-
-            PushColor(b, SpeechColor, fade);
-            b.Append("\"" + piece + "\"");
+            PushColor(b, PrefixColor, 1f);
+            b.Append(prefix);
             b.PopColor();
         }
-    }
 
-    private static void AppendSay(LuminaSeStringBuilder b, string text, float fade)
-    {
-        // no quotes = GTA style, only the *actions* aren't speech
-        var pieces = text.IndexOfAny(QuoteChars) >= 0
-            ? SplitSpeech(text)
-            : ActionRegex.Split(text).Select((piece, i) => (i % 2 == 0, piece)).ToList();
-
-        var first = true;
-        foreach (var (speech, rawPiece) in pieces)
+        if (style == LineStyle.Ooc)
         {
-            var piece = speech ? rawPiece.Trim() : rawPiece.Trim().Trim('*').Trim();
-            if (piece == "")
-                continue;
+            PushColor(b, OocColor, fade);
+            b.Append("(( ").Append(sender).Append(": " + pieces[0].Text + " ))");
+            b.PopColor();
+            return SeString.Parse(b.ToArray());
+        }
 
-            if (!first)
-                b.Append(" ");
-            first = false;
-
-            if (speech)
-            {
-                b.Append(piece);
-                continue;
-            }
-
+        if (isEmote)
+        {
             PushColor(b, EmoteColor, fade);
-            b.Append("*" + piece + "*");
-            b.PopColor();
+            b.Append("* ");
+            if (!isTell)
+                b.Append(sender).Append(" ");
         }
+        else
+        {
+            PushColor(b, SpeechColor, fade);
+            b.Append(sender).Append(style == LineStyle.Shout ? " shouts: " : " says: ");
+        }
+
+        for (var index = 0; index < pieces.Count; index++)
+        {
+            var (isSpeechPiece, piece) = pieces[index];
+            if (index > 0)
+                b.Append(" ");
+
+            if (isEmote && isSpeechPiece)
+            {
+                PushColor(b, SpeechColor, fade);
+                b.Append("\"" + piece + "\"");
+                b.PopColor();
+            }
+            else if (!isEmote && !isSpeechPiece)
+            {
+                PushColor(b, EmoteColor, fade);
+                b.Append("*" + piece + "*");
+                b.PopColor();
+            }
+            else
+            {
+                b.Append(piece);
+            }
+        }
+
+        b.PopColor();
+        return SeString.Parse(b.ToArray());
     }
 
-    // any quote mark flips speech on/off, people mix quote styles a lot.
-    // odd count = a post split over several messages, a leading ” means we start mid-speech
-    private static List<(bool Speech, string Text)> SplitSpeech(string text)
+    private static bool StartsWithActor(string text, string? authorName)
     {
-        var quotes = text.Count(c => QuoteChars.Contains(c));
-        var first = text.IndexOfAny(QuoteChars);
-        var speech = quotes % 2 == 1 && text[first] == '”';
+        if (string.IsNullOrWhiteSpace(authorName))
+            return false;
 
-        var pieces = new List<(bool, string)>();
-        var start = 0;
-        for (var i = 0; i < text.Length; i++)
-        {
-            if (!QuoteChars.Contains(text[i]))
-                continue;
+        var firstName = authorName.Split(' ', 2)[0];
+        if (!text.StartsWith(firstName, StringComparison.OrdinalIgnoreCase))
+            return false;
 
-            pieces.Add((speech, text[start..i]));
-            speech = !speech;
-            start = i + 1;
-        }
-        pieces.Add((speech, text[start..]));
+        if (text.Length == firstName.Length)
+            return true;
 
-        return pieces;
+        var nextCharacter = text[firstName.Length];
+        if (char.IsWhiteSpace(nextCharacter))
+            return true;
+
+        // A possessive such as Legaia's also starts with the author's name.
+        if (nextCharacter == '\'')
+            return true;
+
+        if (nextCharacter == '\u2019')
+            return true;
+
+        return false;
     }
 
     // drops the world name but keeps the player link
@@ -234,13 +285,17 @@ public sealed class ChatStyler : IDisposable
 
     private static bool IsRoleplaying(IPlayerCharacter? speaker)
     {
-        return speaker?.OnlineStatus.RowId == RoleplayingStatus;
+        // OnlineStatus flags use the sheet's row ID as the bit position.
+        var roleplayingStatusRowId = (uint)BitOperations.TrailingZeroCount((ulong)OnlineStatusFlags.RolePlaying);
+        return speaker?.OnlineStatus.RowId == roleplayingStatusRowId;
     }
 
     private float DistanceFade(IPlayerCharacter? speaker)
     {
+        if (speaker == null)
+            return 1f;
         var me = objectTable.LocalPlayer;
-        if (speaker == null || me == null)
+        if (me == null)
             return 1f;
 
         var distance = Vector3.Distance(me.Position, speaker.Position);
@@ -260,8 +315,4 @@ public sealed class ChatStyler : IDisposable
         b.PushColorRgba((byte)(rgb[0] * fade), (byte)(rgb[1] * fade), (byte)(rgb[2] * fade), 0xFF);
     }
 
-    private static string Unquote(string text)
-    {
-        return text.Trim(QuoteChars).Trim();
-    }
 }

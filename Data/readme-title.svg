@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="540" height="136" viewBox="0 0 540 136" role="img" aria-labelledby="title description">
+  <title id="title">ReflavorRP</title>
+  <desc id="description">Purple ReflavorRP wordmark with a chat bubble and an emote asterisk.</desc>
+  <defs>
+    <linearGradient id="lettering" x1="112" y1="30" x2="445" y2="87" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#C2A2DA"/>
+      <stop offset="0.48" stop-color="#AA7CD1"/>
+      <stop offset="1" stop-color="#8750B5"/>
+    </linearGradient>
+    <linearGradient id="outline" x1="22" y1="29" x2="96" y2="99" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#D7BDEB"/>
+      <stop offset="1" stop-color="#8750B5"/>
+    </linearGradient>
+    <linearGradient id="rule" x1="112" y1="110" x2="506" y2="110" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#AA7CD1" stop-opacity="0.7"/>
+      <stop offset="1" stop-color="#AA7CD1" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- A chat bubble carrying the asterisk used for roleplay actions. -->
+  <rect x="16" y="22" width="80" height="80" rx="25" fill="#AA7CD1" fill-opacity="0.08"/>
+  <path d="M38 40h36a10 10 0 0 1 10 10v19a10 10 0 0 1-10 10H55L39 90V79h-1a10 10 0 0 1-10-10V50a10 10 0 0 1 10-10Z"
+        fill="#AA7CD1" fill-opacity="0.06" stroke="url(#outline)" stroke-width="2.5" stroke-linejoin="round"/>
+  <g stroke="#AA7CD1" stroke-width="2.8" stroke-linecap="round">
+    <path d="M56 49v22M46.5 54.5l19 11M46.5 65.5l19-11"/>
+  </g>
+
+  <text x="112" y="73" fill="url(#lettering)" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="52" font-weight="700" letter-spacing="-1.8">ReflavorRP</text>
+  <text x="115" y="96" fill="#9C79B9" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="600" letter-spacing="3">FINAL FANTASY XIV · ROLEPLAY</text>
+
+  <path d="M112 110h394" stroke="url(#rule)"/>
+</svg>

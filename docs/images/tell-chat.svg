@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="310" viewBox="0 0 900 310" role="img" aria-labelledby="title" xml:space="preserve">
+  <title id="title">Tell: the same contact prefix with different authors, purple narration and grey OOC</title>
+  <rect width="900" height="310" rx="12" fill="#19171F"/>
+  <text x="24" y="30" fill="#9C79B9" font-family="Segoe UI, Arial, sans-serif" font-size="12" letter-spacing="2">YOUR LOCAL CHAT · A PRIVATE CONVERSATION</text>
+  <g font-family="Segoe UI, Arial, sans-serif" font-size="18" fill="#FFA64D">
+    <text x="24" y="70">[TELL:Raih'li Tia] <tspan fill="#E6E6E6">Raih'li Tia says: Welcome!</tspan></text>
+    <text x="24" y="112">[TELL:Raih'li Tia] <tspan fill="#E6E6E6">Legaia Lindblum says: A menu, please.</tspan></text>
+    <text x="24" y="154">[TELL:Raih'li Tia] <tspan fill="#C2A2DA">* Raih'li Tia slides over a menu.</tspan></text>
+    <text x="48" y="182" fill="#E6E6E6">"Here you go."</text>
+    <text x="24" y="224">[TELL:Raih'li Tia] <tspan fill="#C2A2DA">* Legaia Lindblum nods. </tspan><tspan fill="#E6E6E6">"Thank you."</tspan></text>
+    <text x="24" y="276">[TELL:Raih'li Tia] <tspan fill="#AFAFAF">(( Legaia Lindblum: one moment ))</tspan></text>
+  </g>
+</svg>

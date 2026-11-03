@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="654" viewBox="0 0 960 654" role="img" aria-labelledby="title description" xml:space="preserve">
+  <title id="title">An evening at The Dancing Daisy</title>
+  <desc id="description">A roleplay conversation with light dialogue, purple actions, orange Tell prefixes and grey out-of-character messages. Public speech, emotes with dialogue, private messages, whispers and a shout share one chat log.</desc>
+  <rect width="960" height="654" rx="12" fill="#19171F"/>
+  <g font-family="Segoe UI, Arial, sans-serif" font-size="18" fill="#E6E6E6">
+    <text x="24" y="40">Raih'li Tia says: Welcome to The Dancing Daisy! A table for one?</text>
+    <text x="24" y="74">Legaia Lindblum says: Just me, tonight. <tspan fill="#C2A2DA">*brushes the rain from her coat.*</tspan></text>
+
+    <text x="24" y="116" fill="#C2A2DA">* Raih'li Tia picks up a menu. <tspan fill="#E6E6E6">"Come in. There's a warm spot by the window."</tspan></text>
+    <text x="24" y="150" fill="#C2A2DA">* Legaia Lindblum follows him inside, her boots leaving little puddles on the floor.</text>
+
+    <text x="24" y="192" fill="#FFA64D">[TELL:Raih'li Tia] <tspan fill="#E6E6E6">Raih'li Tia says: Would you prefer somewhere quieter?</tspan></text>
+    <text x="24" y="226" fill="#FFA64D">[TELL:Raih'li Tia] <tspan fill="#E6E6E6">Legaia Lindblum says: The window sounds perfect, thank you.</tspan></text>
+    <text x="24" y="260" fill="#FFA64D">[TELL:Raih'li Tia] <tspan fill="#C2A2DA">* Raih'li Tia sets a menu beside her. </tspan><tspan fill="#E6E6E6">"Take your time."</tspan></text>
+
+    <text x="24" y="302" fill="#C2A2DA">* Legaia Lindblum scans the menu. <tspan fill="#E6E6E6">"The fish and chips, please."</tspan></text>
+    <text x="48" y="330" fill="#C2A2DA">She closes it with a satisfied nod.</text>
+    <text x="24" y="364">Raih'li Tia says: An excellent choice. <tspan fill="#C2A2DA">*jots down the order.*</tspan> And a drink?</text>
+    <text x="24" y="398">Legaia Lindblum says: Surprise me. <tspan fill="#C2A2DA">*smiles.*</tspan></text>
+
+    <text x="24" y="440">Ziero Aster shouts: Fresh bread! <tspan fill="#C2A2DA">*holds up a basket.*</tspan> Who wants some?</text>
+    <text x="24" y="474" fill="#C2A2DA">* Raih'li Tia whispers, <tspan fill="#E6E6E6">"He does this every evening."</tspan></text>
+    <text x="24" y="508" fill="#C2A2DA">* Legaia Lindblum laughs. <tspan fill="#E6E6E6">"Then I'd better try the bread, too."</tspan></text>
+
+    <text x="24" y="554" fill="#FFA64D">[TELL:Raih'li Tia] <tspan fill="#AFAFAF">(( Legaia Lindblum: one moment, grabbing some tea! ))</tspan></text>
+    <text x="24" y="588" fill="#FFA64D">[TELL:Raih'li Tia] <tspan fill="#AFAFAF">(( Raih'li Tia: of course, take your time ))</tspan></text>
+    <text x="24" y="628" fill="#AFAFAF">(( Ziero Aster: thanks for the scene, everyone! ))</text>
+  </g>
+</svg>

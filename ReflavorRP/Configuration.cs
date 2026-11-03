@@ -19,7 +19,6 @@ public class Configuration : IPluginConfiguration
 
     // incoming
     public bool StyleIncomingChat { get; set; } = true;
-    public bool RewriteFullChatLines { get; set; } = true;
     public bool FadeByDistance { get; set; } = true;
 
     // accents

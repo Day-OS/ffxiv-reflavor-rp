@@ -21,6 +21,7 @@ public sealed unsafe class Plugin : IDalamudPlugin
     [PluginService] internal static IChatGui ChatGui { get; private set; } = null!;
     [PluginService] internal static IObjectTable ObjectTable { get; private set; } = null!;
     [PluginService] internal static IPluginLog Log { get; private set; } = null!;
+    [PluginService] internal static ITextureProvider TextureProvider { get; private set; } = null!;
 
     private static readonly string[] Commands = ["/reflavor", "/reflavorrp", "/textrp"];
 
@@ -38,7 +39,7 @@ public sealed unsafe class Plugin : IDalamudPlugin
 
         configWindow = new ConfigWindow(config);
         windows.AddWindow(configWindow);
-        chatStyler = new ChatStyler(ChatGui, ObjectTable, config);
+        chatStyler = new ChatStyler(ChatGui, ObjectTable, config, Log);
 
         commandHook = GameInterop.HookFromAddress<ShellCommandModule.Delegates.ExecuteCommandInner>(
             (nint)ShellCommandModule.MemberFunctionPointers.ExecuteCommandInner, OnExecuteCommand);
@@ -78,7 +79,8 @@ public sealed unsafe class Plugin : IDalamudPlugin
         try
         {
             if (config.ConversionEnabled)
-                rewritten = RpFormatter.Rewrite(command->ToString(), RaptureShellModule.Instance()->ChatType, config);
+                rewritten = RpFormatter.Rewrite(command->ToString(), RaptureShellModule.Instance()->ChatType, config,
+                    ObjectTable.LocalPlayer?.Name.TextValue);
         }
         catch (Exception e)
         {

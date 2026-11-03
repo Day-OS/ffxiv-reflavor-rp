@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="184" viewBox="0 0 900 184" role="img" aria-labelledby="title">
+  <title id="title">Chat colors: speech, actions, OOC and Tell contact</title>
+  <rect width="900" height="184" rx="12" fill="#19171F"/>
+  <g font-family="Segoe UI, Arial, sans-serif" font-size="18">
+    <text x="24" y="38" fill="#E6E6E6">Speech · Legaia Lindblum says: Hello there.</text>
+    <text x="24" y="76" fill="#C2A2DA">Action · * Legaia Lindblum waves.</text>
+    <text x="24" y="114" fill="#AFAFAF">OOC · (( Legaia Lindblum: one moment ))</text>
+    <text x="24" y="152" fill="#FFA64D">Tell contact · [TELL:Raih'li Tia]</text>
+  </g>
+</svg>

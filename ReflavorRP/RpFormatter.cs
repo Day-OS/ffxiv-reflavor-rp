@@ -9,11 +9,14 @@ public static class RpFormatter
 
     private static readonly Regex QuoteRegex = new("\"([^\"]*)\"", RegexOptions.Compiled);
     private static readonly Regex ActionRegex = new(@"\*([^*]+)\*", RegexOptions.Compiled);
+    private static readonly Regex RoutedCommandRegex = new(
+        @"^/(?:(?:party|p|freecompany|fc|alliance|a|reply|r|linkshell|l|cwlinkshell|cwl|(?:linkshell|l|cwlinkshell|cwl)[1-8])\s+|(?:tell|t)\s+(?:""[^""]+""|<[^<>]+>|[^\s/]+[ \t]+[^\s/]+)\s+)(?=\S)",
+        RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
     #region Commands
 
     // null = let the game handle it
-    public static string? Rewrite(string text, int chatType, Configuration config)
+    public static string? Rewrite(string text, int chatType, Configuration config, string? playerName = null)
     {
         if (!text.StartsWith('/'))
         {
@@ -22,6 +25,32 @@ public static class RpFormatter
             text = "/say " + text;
         }
 
+        var route = RoutedCommandRegex.Match(text);
+        if (route.Success)
+        {
+            var message = text[route.Length..];
+            var rewritten = RewriteCommand(message.StartsWith('/') ? message : "/say " + message, config);
+            if (rewritten == null)
+                return null;
+
+            // These channels have no native emotes. Keep the destination and put the
+            // actor in the message, as /em would have done in local chat.
+            var separator = rewritten.IndexOf(' ');
+            var body = rewritten[(separator + 1)..];
+            if (rewritten.StartsWith("/em "))
+            {
+                if (string.IsNullOrWhiteSpace(playerName))
+                    return null;
+                body = playerName + " " + body;
+            }
+            return route.Value + body;
+        }
+
+        return RewriteCommand(text, config);
+    }
+
+    private static string? RewriteCommand(string text, Configuration config)
+    {
         var parts = text.Split(' ', 2);
         var cmd = parts[0].ToLowerInvariant();
         var args = parts.Length > 1 ? parts[1].Trim() : "";
