@@ -23,10 +23,29 @@ public class Configuration : IPluginConfiguration
     public bool FadeByDistance { get; set; } = true;
 
     // accents
-    public string ActiveAccent { get; set; } = ""; // empty = none
+    public List<string> ActiveAccents { get; set; } = []; // run in this order
     public List<Accent> CustomAccents { get; set; } = [];
 
+    // configs from before combining had a single active accent, this moves it into the list on load
+    public string ActiveAccent
+    {
+        set
+        {
+            if (value != "" && !ActiveAccents.Contains(value))
+                ActiveAccents.Add(value);
+        }
+    }
+
     public Accent? FindAccent(string name) => Accent.Templates.Concat(CustomAccents).FirstOrDefault(a => a.Name == name);
+
+    // all active accents as one, null if there are none
+    public Accent? CombinedAccent()
+    {
+        var active = ActiveAccents.Select(FindAccent).OfType<Accent>().ToList();
+        if (active.Count == 0)
+            return null;
+        return Accent.Combine(string.Join(" + ", active.Select(a => a.Name)), active);
+    }
 
     public void Save() => Plugin.PluginInterface.SavePluginConfig(this);
 }

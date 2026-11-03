@@ -134,37 +134,17 @@ public class ConfigWindow : Window
 
     private void DrawAccentsTab()
     {
-        var active = config.FindAccent(config.ActiveAccent);
+        Section("Active accents");
+        DrawActiveAccents();
 
-        Section("Active accent");
-        ImGui.SetNextItemWidth(-1);
-        if (ImGui.BeginCombo("##active", active?.Name ?? "None"))
-        {
-            if (ImGui.Selectable("None", active == null))
-                SetActiveAccent("");
-
-            foreach (var accent in Accent.Templates)
-            {
-                if (ImGui.Selectable(accent.Name + " (template)", accent == active))
-                    SetActiveAccent(accent.Name);
-            }
-
-            foreach (var accent in config.CustomAccents)
-            {
-                if (ImGui.Selectable(accent.Name, accent == active))
-                    SetActiveAccent(accent.Name);
-            }
-
-            ImGui.EndCombo();
-        }
-
+        var active = config.CombinedAccent();
         if (active != null)
         {
             ImGui.SetNextItemWidth(-1);
             ImGui.InputTextWithHint("##preview", "Type something to test", ref previewText, 256);
             ImGui.TextColored(Purple, "->");
             ImGui.SameLine();
-            ImGui.TextWrapped(active.Apply(previewText));
+            ImGui.TextWrapped(active.Apply(previewText, new Random(0)));
         }
 
         Section("Your accents");
@@ -174,7 +154,7 @@ public class ConfigWindow : Window
         if (active != null)
         {
             ImGui.SameLine();
-            if (ImGui.Button("Copy active accent"))
+            if (ImGui.Button(config.ActiveAccents.Count > 1 ? "Copy active accents as one" : "Copy active accent"))
                 AddAccent(active.Copy(UniqueName(active.Name)));
         }
 
@@ -204,6 +184,63 @@ public class ConfigWindow : Window
             DrawAccentEditor(editing);
     }
 
+    // top to bottom, each accent runs on what the one above it wrote
+    private void DrawActiveAccents()
+    {
+        var names = config.ActiveAccents;
+        for (var i = 0; i < names.Count; i++)
+        {
+            ImGui.PushID(i);
+
+            ImGui.BeginDisabled(i == 0);
+            var up = ImGui.ArrowButton("##up", ImGuiDir.Up);
+            ImGui.EndDisabled();
+
+            ImGui.SameLine();
+            ImGui.BeginDisabled(i == names.Count - 1);
+            var down = ImGui.ArrowButton("##down", ImGuiDir.Down);
+            ImGui.EndDisabled();
+
+            ImGui.SameLine();
+            var removed = ImGui.Button("X");
+
+            ImGui.SameLine();
+            ImGui.Text($"{i + 1}. {names[i]}");
+
+            ImGui.PopID();
+
+            if (up || down || removed)
+            {
+                var name = names[i];
+                names.RemoveAt(i);
+                if (up)
+                    names.Insert(i - 1, name);
+                else if (down)
+                    names.Insert(i + 1, name);
+                config.Save();
+                break;
+            }
+        }
+
+        ImGui.SetNextItemWidth(-1);
+        if (ImGui.BeginCombo("##add", names.Count == 0 ? "None, pick an accent" : "Add another accent"))
+        {
+            foreach (var accent in Accent.Templates)
+            {
+                if (!names.Contains(accent.Name) && ImGui.Selectable(accent.Name + " (template)"))
+                    AddActiveAccent(accent.Name);
+            }
+
+            foreach (var accent in config.CustomAccents)
+            {
+                if (!names.Contains(accent.Name) && ImGui.Selectable(accent.Name))
+                    AddActiveAccent(accent.Name);
+            }
+
+            ImGui.EndCombo();
+        }
+    }
+
 
 
     private void DrawAccentEditor(Accent accent)
@@ -212,17 +249,19 @@ public class ConfigWindow : Window
         ImGui.SetNextItemWidth(-60);
         if (ImGui.InputText("Name", ref name, 64) && name != "" && config.FindAccent(name) == null)
         {
-            if (config.ActiveAccent == accent.Name)
-                config.ActiveAccent = name;
+            var activeIndex = config.ActiveAccents.IndexOf(accent.Name);
+            if (activeIndex >= 0)
+                config.ActiveAccents[activeIndex] = name;
             accent.Name = name;
             config.Save();
         }
 
         var tableFlags = ImGuiTableFlags.BordersInnerH | ImGuiTableFlags.RowBg | ImGuiTableFlags.SizingStretchSame;
-        if (ImGui.BeginTable("rules", 3, tableFlags))
+        if (ImGui.BeginTable("rules", 4, tableFlags))
         {
             ImGui.TableSetupColumn("Pattern (regex)");
             ImGui.TableSetupColumn("Replacement ($1 = group)");
+            ImGui.TableSetupColumn("Chance", ImGuiTableColumnFlags.WidthFixed, 70);
             ImGui.TableSetupColumn("", ImGuiTableColumnFlags.WidthFixed, 24);
             ImGui.TableHeadersRow();
 
@@ -235,7 +274,7 @@ public class ConfigWindow : Window
                 ImGui.TableNextColumn();
                 var pattern = rule.Pattern;
                 ImGui.SetNextItemWidth(-1);
-                if (ImGui.InputText("##pattern", ref pattern, 128))
+                if (ImGui.InputText("##pattern", ref pattern, 512))
                 {
                     rule.Pattern = pattern;
                     config.Save();
@@ -247,9 +286,18 @@ public class ConfigWindow : Window
                 ImGui.TableNextColumn();
                 var replacement = rule.Replacement;
                 ImGui.SetNextItemWidth(-1);
-                if (ImGui.InputText("##replacement", ref replacement, 128))
+                if (ImGui.InputText("##replacement", ref replacement, 512))
                 {
                     rule.Replacement = replacement;
+                    config.Save();
+                }
+
+                ImGui.TableNextColumn();
+                var chance = rule.Chance;
+                ImGui.SetNextItemWidth(-1);
+                if (ImGui.SliderInt("##chance", ref chance, 0, 100, "%d%%"))
+                {
+                    rule.Chance = chance;
                     config.Save();
                 }
 
@@ -277,8 +325,7 @@ public class ConfigWindow : Window
         ImGui.SameLine();
         if (ImGui.Button("Delete accent"))
         {
-            if (config.ActiveAccent == accent.Name)
-                config.ActiveAccent = "";
+            config.ActiveAccents.Remove(accent.Name);
             config.CustomAccents.Remove(accent);
             editingAccent = -1;
             config.Save();
@@ -292,9 +339,9 @@ public class ConfigWindow : Window
         config.Save();
     }
 
-    private void SetActiveAccent(string name)
+    private void AddActiveAccent(string name)
     {
-        config.ActiveAccent = name;
+        config.ActiveAccents.Add(name);
         config.Save();
     }
 

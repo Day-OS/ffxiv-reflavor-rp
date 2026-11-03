@@ -28,7 +28,7 @@ public static class RpFormatter
         if (args == "")
             return null;
 
-        var accent = config.FindAccent(config.ActiveAccent);
+        var accent = config.CombinedAccent();
 
         switch (cmd)
         {

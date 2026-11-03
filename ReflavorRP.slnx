@@ -2,4 +2,7 @@
   <Project Path="ReflavorRP/ReflavorRP.csproj">
     <Platform Project="x64" />
   </Project>
+  <Project Path="ReflavorRP.Tests/ReflavorRP.Tests.csproj">
+    <Platform Project="x64" />
+  </Project>
 </Solution>
