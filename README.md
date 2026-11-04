@@ -55,17 +55,6 @@ dotnet test ReflavorRP.Tests/ReflavorRP.Tests.csproj --filter FullyQualifiedName
 
 The tests check the actual text and encoded colors using Dalamud/Lumina. The preview is the actual printed `[TELL:Contact] Author says: message` or `[TELL:Contact] * Author action.` line. It does not render the game UI. Speech is `#E6E6E6`, and emotes/narration are `#C2A2DA`.
 
-## Project layout
-
-| File | What it does |
-| --- | --- |
-| `Plugin.cs` | Entry point, commands, and the hook on the game's command execution. Dalamud's command API only receives commands the game doesn't know, so overriding `/me` and `/say` needs a hook. |
-| `RpFormatter.cs` | Outgoing conversion (GTA World input → FFXIV RP line). |
-| `ChatStyler.cs` | Incoming chat restyling and distance fade. |
-| `Accent.cs` | Accent rules and the built-in templates. |
-| `Configuration.cs` | Saved settings. |
-| `Windows/ConfigWindow.cs` | Settings window. |
-
 ## A personal project, made with AI assistance
 
 I made ReflavorRP for fun and for my own use. It's a simple personal project, built with AI assistance, and I'm sharing it in case someone else finds it useful.
