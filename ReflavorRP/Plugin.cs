@@ -27,6 +27,7 @@ public sealed unsafe class Plugin : IDalamudPlugin
     [PluginService] internal static IObjectTable ObjectTable { get; private set; } = null!;
     [PluginService] internal static IPluginLog Log { get; private set; } = null!;
     [PluginService] internal static ITextureProvider TextureProvider { get; private set; } = null!;
+    [PluginService] internal static IFramework Framework { get; private set; } = null!;
 
     private static readonly string[] Commands = ["/reflavor", "/reflavorrp", "/textrp"];
 
@@ -34,6 +35,7 @@ public sealed unsafe class Plugin : IDalamudPlugin
     private readonly WindowSystem windows = new("ReflavorRP");
     private readonly ConfigWindow configWindow;
     private readonly ChatStyler chatStyler;
+    private bool disposed;
 
     // CommandManager only gets commands the game doesn't know, so /me, /say etc. need a hook
     private readonly Hook<ShellCommandModule.Delegates.ExecuteCommandInner> commandHook;
@@ -67,6 +69,7 @@ public sealed unsafe class Plugin : IDalamudPlugin
 
     public void Dispose()
     {
+        disposed = true;
         PluginInterface.UiBuilder.Draw -= windows.Draw;
         PluginInterface.UiBuilder.OpenConfigUi -= configWindow.Toggle;
         PluginInterface.UiBuilder.OpenMainUi -= configWindow.Toggle;
@@ -79,12 +82,8 @@ public sealed unsafe class Plugin : IDalamudPlugin
         chatStyler.Dispose();
     }
 
-    private static void ShowChatBubble(IChatMessage message)
+    private void ShowChatBubble(IChatMessage message)
     {
-        var logModule = RaptureLogModule.Instance();
-        if (logModule == null)
-            return;
-
         var player = message.Sender.Payloads.OfType<PlayerPayload>().FirstOrDefault();
         // Outgoing Tell identifies its recipient; unlinked public senders are ourselves.
         var isLocalPlayer = message.LogKind == XivChatType.TellOutgoing || player == null;
@@ -92,12 +91,24 @@ public sealed unsafe class Plugin : IDalamudPlugin
         if (string.IsNullOrWhiteSpace(senderName))
             return;
 
-        using var sender = new Utf8String();
-        using var text = new Utf8String();
-        sender.SetString(senderName);
-        text.SetString(message.Message.Encode());
-        logModule->ShowMiniTalkPlayer((ushort)message.LogKind, &sender, &text,
-            (ushort)(player?.World.RowId ?? 0), isLocalPlayer);
+        // Dalamud reuses IChatMessage; capture values now, never retain the event object.
+        var chatType = (ushort)message.LogKind;
+        var messageBytes = message.Message.Encode();
+        var worldId = (ushort)(player?.World.RowId ?? 0);
+        _ = Framework.RunOnTick(() =>
+        {
+            if (disposed || !config.Enabled || !config.StyleIncomingChat)
+                return;
+            var logModule = RaptureLogModule.Instance();
+            if (logModule == null)
+                return;
+
+            using var sender = new Utf8String();
+            using var text = new Utf8String();
+            sender.SetString(senderName);
+            text.SetString(messageBytes);
+            logModule->ShowMiniTalkPlayer(chatType, &sender, &text, worldId, isLocalPlayer);
+        }, delayTicks: 1);
     }
 
     private void OnExecuteCommand(ShellCommandModule* self, Utf8String* command, UIModule* uiModule)

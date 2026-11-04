@@ -177,8 +177,6 @@ public sealed class ChatStyler : IDisposable
 
         var line = BuildLine(pieces, style, isTell, authorName,
             new ReadOnlySeString(prefix.ToArray()), fade, highlights);
-        // Suppressing native PrintMessage also skips its overhead chat bubble.
-        showChatBubble(msg);
         msg.PreventOriginal();
         chatGui.Print(new XivChatEntry
         {
@@ -186,6 +184,8 @@ public sealed class ChatStyler : IDisposable
             Timestamp = msg.Timestamp,
             Message = line,
         });
+        // Queue the replacement before scheduling the native bubble for the next frame.
+        showChatBubble(msg);
 
         var isOwnMessage = msg.LogKind == XivChatType.TellOutgoing || senderName.TextValue == localName;
         if (config.PlayHighlightSound && !isOwnMessage && highlights != null &&

@@ -76,6 +76,25 @@ public class ChatStylerTests : IDisposable
     }
 
     [Fact]
+    public void QueuesEachChatLineBeforeItsCurrentBubble()
+    {
+        var events = new List<string>();
+        chat.Setup(c => c.Print(It.IsAny<XivChatEntry>()))
+            .Callback<XivChatEntry>(entry => events.Add("chat: " + entry.Message.TextValue));
+        showChatBubble.Setup(show => show(It.IsAny<IChatMessage>()))
+            .Callback<IChatMessage>(message => events.Add("bubble: " + message.Message.TextValue));
+
+        Receive(XivChatType.Say, "\"First.\"");
+        Receive(XivChatType.Say, "\"Second.\"");
+
+        Assert.Equal(new[]
+        {
+            "chat: Raih’li says: First.", "bubble: \"First.\"",
+            "chat: Raih’li says: Second.", "bubble: \"Second.\"",
+        }, events);
+    }
+
+    [Fact]
     public void TellPrefixIsOrangeAndActionRestoresSpeechColor()
     {
         Receive(XivChatType.TellOutgoing, "“I *really* mean it.” *waves* “Bye.”");
