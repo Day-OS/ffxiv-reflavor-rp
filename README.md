@@ -4,7 +4,9 @@
 A [Dalamud](https://github.com/goatcorp/Dalamud) plugin for FINAL FANTASY XIV that brings SA-MP / GTA World style roleplay to your chat. Write dialogue and actions with familiar commands, style incoming conversations, and add optional speech accents. Other players see normal FFXIV messages; the restyling is local to you.
 
 ## Example
-![A roleplay scene at The Dancing Daisy: dialogue, purple emotes, orange Tells, whispers, a shout and grey OOC](docs/images/chat-showcase.svg)
+![A roleplay scene at The Dancing Daisy: styled chat on the left and matching speech, action, Tell and OOC bubbles on the right](docs/images/chat-showcase.svg)
+
+The chat log is on the left; examples of the plugin's alternative chat bubbles are on the right. Enable **Incoming → Alternative chat bubbles** in `/reflavor` to use them. Mixed speech and actions appear in separate bubbles.
 
 
 # How to Use it

@@ -1,8 +1,19 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="960" height="654" viewBox="0 0 960 654" role="img" aria-labelledby="title description" xml:space="preserve">
+<svg xmlns="http://www.w3.org/2000/svg" width="1150" height="820" viewBox="0 0 1150 820" role="img" aria-labelledby="title description" xml:space="preserve">
   <title id="title">An evening at The Dancing Daisy</title>
-  <desc id="description">A roleplay conversation with light dialogue, purple actions, orange Tell prefixes and grey out-of-character messages. Public speech, emotes with dialogue, private messages, whispers and a shout share one chat log.</desc>
-  <rect width="960" height="654" rx="12" fill="#19171F"/>
-  <g font-family="Segoe UI, Arial, sans-serif" font-size="18" fill="#E6E6E6">
+  <desc id="description">A roleplay conversation at The Dancing Daisy on the left, with examples of the plugin's alternative chat bubbles on the right: white speech, an ornamented purple action, a Tell nameplate, separate bubbles for speech and action, and muted grey OOC. Bubbles reproduce the drawing in ChatBubbles.cs at full opacity and reference camera distance, with nameplates, tails and countdown bars. This is a static illustration; font rendering depends on the viewer.</desc>
+  <rect width="1150" height="820" rx="12" fill="#19171F"/>
+  <path d="M760 24V796" stroke="#37313F"/>
+  <g font-family="Segoe UI, Arial, sans-serif" fill="#E6E6E6">
+    <g font-size="18" font-weight="600">
+      <text x="24" y="34">An evening at The Dancing Daisy</text>
+      <text x="784" y="34">Alternative chat bubbles</text>
+    </g>
+    <g font-size="14" fill="#AFAFAF">
+      <text x="24" y="58">Chat log</text>
+      <text x="784" y="58">The same scene, above the characters</text>
+    </g>
+  </g>
+  <g transform="translate(0 62)" font-family="Segoe UI, Arial, sans-serif" font-size="18" fill="#E6E6E6">
     <text x="24" y="40">Raih'li Tia says: Welcome to The Dancing Daisy! A table for one?</text>
     <text x="24" y="74">Legaia Lindblum says: Just me, tonight. <tspan fill="#C2A2DA">*brushes the rain from her coat.*</tspan></text>
 
@@ -25,5 +36,115 @@
     <text x="24" y="554" fill="#FFA64D">[TELL:Raih'li Tia] <tspan fill="#AFAFAF">(( Legaia Lindblum: one moment, grabbing some tea! ))</tspan></text>
     <text x="24" y="588" fill="#FFA64D">[TELL:Raih'li Tia] <tspan fill="#AFAFAF">(( Raih'li Tia: of course, take your time ))</tspan></text>
     <text x="24" y="628" fill="#AFAFAF">(( Ziero Aster: thanks for the scene, everyone! ))</text>
+  </g>
+  <!-- Reference scale = 1. Colors, padding, radii and decorations follow ChatBubbles.Draw.
+       Static snapshots show different speakers/moments, rather than one live queue.
+       Only the oldest piece has a countdown; only the newest piece has a tail. -->
+  <defs>
+    <g id="countdown">
+      <rect x="345" y="0" width="4" height="61" rx="2" fill="#26212E" fill-opacity="0.25"/>
+      <rect x="345" y="17" width="4" height="44" rx="2" fill="currentColor"/>
+    </g>
+    <g id="filigree-action" stroke="currentColor" fill="currentColor">
+      <path d="M22 0H122.5M140.5 0H241" fill="none"/>
+      <path d="M128.5 0L131.5 -3L134.5 0L131.5 3Z" stroke="none"/>
+      <path d="M13 0L16 -3L19 0L16 3ZM244 0L247 -3L250 0L247 3Z" fill="none"/>
+      <circle cx="125.5" r="1" stroke="none"/><circle cx="137.5" r="1" stroke="none"/>
+    </g>
+    <g id="filigree-mixed" stroke="currentColor" fill="currentColor">
+      <path d="M22 0H64M82 0H124" fill="none"/>
+      <path d="M70 0L73 -3L76 0L73 3Z" stroke="none"/>
+      <path d="M13 0L16 -3L19 0L16 3ZM127 0L130 -3L133 0L130 3Z" fill="none"/>
+      <circle cx="67" r="1" stroke="none"/><circle cx="79" r="1" stroke="none"/>
+    </g>
+  </defs>
+  <g font-family="Segoe UI, Arial, sans-serif" font-size="18">
+    <!-- Speech: 12 x 8 padding, 10 px corners, inner rim and lower rule. -->
+    <g transform="translate(784 100)" color="#B3ADBD">
+      <path d="M0 0H330A10 10 0 0 1 340 10V51A10 10 0 0 1 330 61H10A10 10 0 0 1 0 51Z" fill="#FFFFFF" fill-opacity="0.98" stroke="currentColor"/>
+      <path d="M3 3H330A7 7 0 0 1 337 10V51A7 7 0 0 1 330 58H10A7 7 0 0 1 3 51Z" fill="none" stroke="#FFFFFF" stroke-opacity="0.65"/>
+      <path d="M14 57H326" stroke="currentColor"/>
+      <text x="12" y="29" fill="#241F2B"><tspan x="12">Welcome to The Dancing Daisy!</tspan><tspan x="12" dy="21">A table for one?</tspan></text>
+      <g transform="translate(0 -8)">
+        <rect width="66" height="16" rx="3" fill="#FFFFFF" fill-opacity="0.98" stroke="currentColor"/>
+        <text x="3" y="12" font-size="14.4" fill="#241F2B" fill-opacity="0.85">Raih'li Tia</text>
+      </g>
+      <use href="#countdown"/>
+      <path d="M164 59L170 73L176 59" fill="#FFFFFF" fill-opacity="0.98"/>
+      <path d="M164 59L170 73L176 59" fill="none" stroke="currentColor"/>
+    </g>
+    <!-- Custom-emote narration includes the speaker's name in the body. -->
+    <g transform="translate(784 230)" color="#9159BA">
+      <path d="M0 0H249A14 14 0 0 1 263 14V49A14 14 0 0 1 249 63H14A14 14 0 0 1 0 49Z" fill="#E3D1F5" fill-opacity="0.98" stroke="currentColor" stroke-width="1.5"/>
+      <path d="M4 4H249A10 10 0 0 1 259 14V49A10 10 0 0 1 249 59H14A10 10 0 0 1 4 49Z" fill="none" stroke="currentColor"/>
+      <use href="#filigree-action" transform="translate(0 15)"/>
+      <use href="#filigree-action" transform="translate(0 52)"/>
+      <text x="18" y="41" fill="#4D2969"><tspan x="18">* Raih'li Tia picks up a menu.</tspan></text>
+      <g transform="translate(0 -8)">
+        <rect width="66" height="16" rx="3" fill="#E3D1F5" fill-opacity="0.98" stroke="currentColor"/>
+        <text x="3" y="12" font-size="14.4" fill="#4D2969" fill-opacity="0.85">Raih'li Tia</text>
+      </g>
+      <rect x="268" y="0" width="4" height="63" rx="2" fill="#26212E" fill-opacity="0.25"/>
+      <rect x="268" y="19" width="4" height="44" rx="2" fill="currentColor"/>
+      <!-- This action precedes speech in the same emote, so it has no tail. -->
+    </g>
+    <!-- Tell uses the speaker's name and the same white speech body. -->
+    <g transform="translate(784 368)" color="#B3ADBD">
+      <path d="M0 0H330A10 10 0 0 1 340 10V51A10 10 0 0 1 330 61H10A10 10 0 0 1 0 51Z" fill="#FFFFFF" fill-opacity="0.98" stroke="currentColor"/>
+      <path d="M3 3H330A7 7 0 0 1 337 10V51A7 7 0 0 1 330 58H10A7 7 0 0 1 3 51Z" fill="none" stroke="#FFFFFF" stroke-opacity="0.65"/>
+      <path d="M14 57H326" stroke="currentColor"/>
+      <text x="12" y="29" fill="#241F2B"><tspan x="12">The window sounds perfect,</tspan><tspan x="12" dy="21">thank you.</tspan></text>
+      <g transform="translate(0 -8)">
+        <rect width="145" height="16" rx="3" fill="#FFFFFF" fill-opacity="0.98" stroke="currentColor"/>
+        <text x="3" y="12" font-size="14.4" fill="#944D05" fill-opacity="0.9">[Tell] Legaia Lindblum</text>
+      </g>
+      <use href="#countdown"/>
+      <path d="M164 59L170 73L176 59" fill="#FFFFFF" fill-opacity="0.98"/>
+      <path d="M164 59L170 73L176 59" fill="none" stroke="currentColor"/>
+    </g>
+    <!-- Mixed Say: older speech above newer action, countdown only on speech. -->
+    <text x="784" y="482" font-size="14" fill="#AFAFAF">Speech + action → separate bubbles</text>
+    <g transform="translate(887 506)" color="#B3ADBD">
+      <path d="M0 0H124A10 10 0 0 1 134 10V30A10 10 0 0 1 124 40H10A10 10 0 0 1 0 30Z" fill="#FFFFFF" fill-opacity="0.98" stroke="currentColor"/>
+      <path d="M3 3H124A7 7 0 0 1 131 10V30A7 7 0 0 1 124 37H10A7 7 0 0 1 3 30Z" fill="none" stroke="#FFFFFF" stroke-opacity="0.65"/>
+      <path d="M14 36H120" stroke="currentColor"/>
+      <text x="12" y="29" fill="#241F2B">Surprise me.</text>
+      <g transform="translate(0 -8)">
+        <rect width="110" height="16" rx="3" fill="#FFFFFF" fill-opacity="0.98" stroke="currentColor"/>
+        <text x="3" y="12" font-size="14.4" fill="#241F2B" fill-opacity="0.85">Legaia Lindblum</text>
+      </g>
+      <rect x="139" y="0" width="4" height="40" rx="2" fill="#26212E" fill-opacity="0.25"/>
+      <rect x="139" y="10" width="4" height="30" rx="2" fill="currentColor"/>
+    </g>
+    <g transform="translate(881 561)" color="#9159BA">
+      <path d="M0 0H132A14 14 0 0 1 146 14V49A14 14 0 0 1 132 63H14A14 14 0 0 1 0 49Z" fill="#E3D1F5" fill-opacity="0.98" stroke="currentColor" stroke-width="1.5"/>
+      <path d="M4 4H132A10 10 0 0 1 142 14V49A10 10 0 0 1 132 59H14A10 10 0 0 1 4 49Z" fill="none" stroke="currentColor"/>
+      <use href="#filigree-mixed" transform="translate(0 15)"/>
+      <use href="#filigree-mixed" transform="translate(0 52)"/>
+      <text x="18" y="41" fill="#4D2969">* smiles.</text>
+      <g transform="translate(0 -8)">
+        <rect width="110" height="16" rx="3" fill="#E3D1F5" fill-opacity="0.98" stroke="currentColor"/>
+        <text x="3" y="12" font-size="14.4" fill="#4D2969" fill-opacity="0.85">Legaia Lindblum</text>
+      </g>
+      <path d="M67 60.5L73 75L79 60.5" fill="#E3D1F5" fill-opacity="0.98"/>
+      <path d="M67 60.5L73 75L79 60.5" fill="none" stroke="currentColor" stroke-width="1.5"/>
+    </g>
+    <!-- OOC: muted background, corner accents and three lower dots. -->
+    <g transform="translate(784 706)" color="#94949E">
+      <path d="M0 0H330A10 10 0 0 1 340 10V51A10 10 0 0 1 330 61H10A10 10 0 0 1 0 51Z" fill="#DEDEE3" fill-opacity="0.9" stroke="currentColor" stroke-opacity="0.55"/>
+      <g stroke="currentColor" fill="currentColor" opacity="0.55">
+        <path d="M13 5H5V10M327 56H335V51" fill="none"/>
+        <circle cx="166" cy="57" r="1"/><circle cx="170" cy="57" r="1"/><circle cx="174" cy="57" r="1"/>
+      </g>
+      <text x="12" y="29" fill="#52525C"><tspan x="12">(( one moment, grabbing</tspan><tspan x="12" dy="21">some tea! ))</tspan></text>
+      <g transform="translate(0 -8)">
+        <rect width="145" height="16" rx="3" fill="#DEDEE3" fill-opacity="0.9" stroke="currentColor" stroke-opacity="0.55"/>
+        <text x="3" y="12" font-size="14.4" fill="#944D05" fill-opacity="0.9">[Tell] Legaia Lindblum</text>
+      </g>
+      <rect x="345" y="0" width="4" height="61" rx="2" fill="#26212E" fill-opacity="0.25"/>
+      <rect x="345" y="31" width="4" height="30" rx="2" fill="currentColor" fill-opacity="0.55"/>
+      <path d="M164 59L170 73L176 59" fill="#DEDEE3" fill-opacity="0.9"/>
+      <path d="M164 59L170 73L176 59" fill="none" stroke="currentColor" stroke-opacity="0.55"/>
+    </g>
   </g>
 </svg>

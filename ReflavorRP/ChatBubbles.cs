@@ -170,14 +170,22 @@ public sealed class ChatBubbles(IObjectTable objects, IGameGui gameGui, Configur
             var heading = isTell ? "[Tell] " + bubble.Name : bubble.Name;
             const float headingScale = 0.8f;
             var headingSize = ImGui.CalcTextSize(heading) * headingScale;
+            var labelHeight = headingSize.Y + 2 * scale;
+            // Keep the emote's 3px ornaments below the nameplate, then leave room for text.
+            var actionOrnamentY = labelHeight / 2 + 7 * scale;
+            var textTop = isAction ? actionOrnamentY + 8 * scale : labelHeight / 2 + 3 * scale;
+            var headingSpace = Math.Max(0, textTop - padding.Y);
             var contentWidth = Math.Max(ImGui.CalcTextSize(bubble.Text).X, headingSize.X + 6 * scale);
             var width = Math.Clamp(contentWidth + padding.X * 2,
                 90 * scale, 340 * scale);
             var textSize = ImGui.CalcTextSize(bubble.Text, false, width - padding.X * 2);
-            var windowHeight = Math.Max(ImGui.GetStyle().WindowMinSize.Y, textSize.Y + padding.Y * 2);
+            // Leave 8px between the text and the lower ornament's tip (11px inset + 3px radius).
+            var bottomPadding = isAction ? 22 * scale : padding.Y;
+            var windowHeight = Math.Max(ImGui.GetStyle().WindowMinSize.Y,
+                textSize.Y + headingSpace + padding.Y + bottomPadding);
             // Include the nameplate, countdown bar and short tail in collision bounds.
             var bounds = new BubbleBounds(
-                new Vector2(anchor.X - width / 2, anchor.Y - windowHeight - headingSize.Y - scale),
+                new Vector2(anchor.X - width / 2, anchor.Y - windowHeight - labelHeight / 2 - scale),
                 new Vector2(anchor.X + width / 2 + 10 * scale, hasTail ? bubbleTip.Y : anchor.Y));
             var placement = PlaceAboveOverlaps(bounds, placed, 6 * scale);
             var shift = placement.Min.Y - bounds.Min.Y;
@@ -188,23 +196,18 @@ public sealed class ChatBubbles(IObjectTable objects, IGameGui gameGui, Configur
             ImGui.SetNextWindowSize(new Vector2(width, windowHeight), ImGuiCond.Always);
             ImGuiHelpers.ForceNextWindowMainViewport();
             ImGui.PushStyleVar(ImGuiStyleVar.Alpha, opacity);
-            ImGui.PushStyleVar(ImGuiStyleVar.WindowRounding, (isAction ? 14 : 10) * scale);
             ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, padding);
             var thickness = (isAction ? 1.5f : 1f) * scale;
             ImGui.PushStyleVar(ImGuiStyleVar.WindowBorderSize, thickness);
-            ImGui.PushStyleColor(ImGuiCol.WindowBg, background);
-            ImGui.PushStyleColor(ImGuiCol.Border, border);
             ImGui.PushStyleColor(ImGuiCol.Text, textColor);
 
-            var flags = ImGuiWindowFlags.NoDecoration |
+            var flags = ImGuiWindowFlags.NoDecoration | ImGuiWindowFlags.NoBackground |
                 ImGuiWindowFlags.NoInputs | ImGuiWindowFlags.NoSavedSettings | ImGuiWindowFlags.NoFocusOnAppearing |
                 ImGuiWindowFlags.NoBringToFrontOnFocus;
             if (ImGui.Begin($"###ReflavorRPBubble_{bubble.Id}", flags))
             {
                 if (isActive)
                     item.Queue[0] = bubble with { WasVisible = true };
-                ImGui.TextWrapped(bubble.Text);
-
                 var draw = ImGui.GetWindowDrawList();
                 var top = ImGui.GetWindowPos();
                 var size = ImGui.GetWindowSize();
@@ -212,19 +215,29 @@ public sealed class ChatBubbles(IObjectTable objects, IGameGui gameGui, Configur
                 border.W *= opacity;
                 var decoration = ImGui.ColorConvertFloat4ToU32(border);
                 var backgroundColor = ImGui.ColorConvertFloat4ToU32(background);
+                // Keep the upper-left corner square where the nameplate meets the body.
+                const ImDrawFlags roundedCorners = ImDrawFlags.RoundCornersTopRight |
+                    ImDrawFlags.RoundCornersBottomLeft | ImDrawFlags.RoundCornersBottomRight;
+                var rounding = (isAction ? 14 : 10) * scale;
+                draw.PushClipRect(top - new Vector2(thickness), top + size + new Vector2(thickness), false);
+                draw.AddRectFilled(top, top + size, backgroundColor, rounding, roundedCorners);
+                draw.AddRect(top, top + size, decoration, rounding, roundedCorners, thickness);
+                draw.PopClipRect();
+                ImGui.SetCursorPosY(ImGui.GetCursorPosY() + headingSpace);
+                ImGui.TextWrapped(bubble.Text);
                 // One drawing area includes the nameplate above and the bar and tail outside the box.
                 var clipBottom = top + size + new Vector2(10 * scale, thickness);
                 if (hasTail)
                     clipBottom.Y = Math.Max(clipBottom.Y, bubbleTip.Y + thickness);
-                draw.PushClipRect(top - new Vector2(scale, headingSize.Y + scale), clipBottom, false);
+                draw.PushClipRect(top - new Vector2(scale, labelHeight / 2 + scale), clipBottom, false);
                 if (isAction)
                 {
                     // An inset frame and matching filigree above and below the narration.
                     draw.AddRect(top + new Vector2(4, 4) * scale,
-                        top + size - new Vector2(4, 4) * scale, decoration, 10 * scale);
+                        top + size - new Vector2(4, 4) * scale, decoration, 10 * scale, roundedCorners);
                     for (var edge = 0; edge < 2; edge++)
                     {
-                        var y = edge == 0 ? 8 * scale : size.Y - 8 * scale;
+                        var y = edge == 0 ? actionOrnamentY : size.Y - 11 * scale;
                         var left = top + new Vector2(16 * scale, y);
                         var right = top + new Vector2(size.X - 16 * scale, y);
                         var center = top + new Vector2(size.X / 2, y);
@@ -264,14 +277,14 @@ public sealed class ChatBubbles(IObjectTable objects, IGameGui gameGui, Configur
                     // A light inner rim keeps speech bubbles softer than the emote frame.
                     var highlight = ImGui.ColorConvertFloat4ToU32(new Vector4(1, 1, 1, 0.65f * opacity));
                     draw.AddRect(top + new Vector2(3, 3) * scale,
-                        top + size - new Vector2(3, 3) * scale, highlight, 7 * scale);
+                        top + size - new Vector2(3, 3) * scale, highlight, 7 * scale, roundedCorners);
                     draw.AddLine(top + new Vector2(14 * scale, size.Y - 4 * scale),
                         top + new Vector2(size.X - 14 * scale, size.Y - 4 * scale), decoration, scale);
                 }
-                // A separate nameplate sits over the upper-left border, outside the body text.
-                var labelTop = top + new Vector2(0, -headingSize.Y + 3 * scale);
+                // Center the nameplate vertically on the body's upper border.
+                var labelTop = top - new Vector2(0, labelHeight / 2);
                 var labelWidth = Math.Min(headingSize.X + 6 * scale, size.X);
-                var labelBottom = labelTop + new Vector2(labelWidth, headingSize.Y + 2 * scale);
+                var labelBottom = labelTop + new Vector2(labelWidth, labelHeight);
                 var headingColor = new Vector4(textColor.X, textColor.Y, textColor.Z, 0.85f * opacity);
                 if (isTell)
                     headingColor = new Vector4(0.58f, 0.3f, 0.02f, 0.9f * opacity);
@@ -285,8 +298,8 @@ public sealed class ChatBubbles(IObjectTable objects, IGameGui gameGui, Configur
                 if (isActive)
                 {
                     var remaining = Math.Clamp((bubble.ExpiresAt - now) / (float)bubble.DurationMilliseconds, 0f, 1f);
-                    var barTop = top + new Vector2(size.X + 5 * scale, 6 * scale);
-                    var barBottom = top + new Vector2(size.X + 9 * scale, size.Y - 6 * scale);
+                    var barTop = top + new Vector2(size.X + 5 * scale, 0);
+                    var barBottom = top + new Vector2(size.X + 9 * scale, size.Y);
                     var track = ImGui.ColorConvertFloat4ToU32(new Vector4(0.15f, 0.13f, 0.18f, 0.25f * opacity));
                     draw.AddRectFilled(barTop, barBottom, track, 2 * scale);
                     if (remaining > 0f)
@@ -309,8 +322,8 @@ public sealed class ChatBubbles(IObjectTable objects, IGameGui gameGui, Configur
                 draw.PopClipRect();
             }
             ImGui.End();
-            ImGui.PopStyleColor(3);
-            ImGui.PopStyleVar(4);
+            ImGui.PopStyleColor();
+            ImGui.PopStyleVar(3);
         }
     }
 
