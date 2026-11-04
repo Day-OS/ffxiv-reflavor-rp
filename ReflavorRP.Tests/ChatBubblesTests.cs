@@ -137,4 +137,30 @@ public class ChatBubblesTests
         Assert.Equal(0, messages[1].ExpiresAt);
     }
 
+    [Fact]
+    public void HoverFreezesRemainingTimeThenResumesWithoutResettingIt()
+    {
+        var messages = new List<ChatBubbles.Bubble>
+        {
+            new(1, "Legaia", 75, "First", XivChatType.Say, 5000),
+            new(2, "Legaia", 75, "Second", XivChatType.Say, 6000),
+        };
+        ChatBubbles.AdvanceQueue(messages, 1000);
+        ChatBubbles.AdvanceQueue(messages, 2000);
+        messages[0] = messages[0] with { WasHovered = true };
+
+        ChatBubbles.AdvanceQueue(messages, 12000);
+        Assert.Equal(4000, messages[0].ExpiresAt - 12000);
+        Assert.Equal(0, messages[1].ExpiresAt);
+        ChatBubbles.AdvanceQueue(messages, 15000);
+        Assert.Equal(4000, messages[0].ExpiresAt - 15000);
+
+        messages[0] = messages[0] with { WasHovered = false };
+        ChatBubbles.AdvanceQueue(messages, 18999);
+        Assert.Equal(1, messages[0].Id);
+        ChatBubbles.AdvanceQueue(messages, 19000);
+        Assert.Equal(2, Assert.Single(messages).Id);
+        Assert.Equal(25000, messages[0].ExpiresAt);
+    }
+
 }

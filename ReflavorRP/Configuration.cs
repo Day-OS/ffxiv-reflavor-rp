@@ -25,6 +25,7 @@ public class Configuration : IPluginConfiguration
     public bool FadeByDistance { get; set; } = true;
     public bool AlternativeChatBubbles { get; set; } = true;
     public float ChatBubbleReadingSpeed { get; set; } = 10f;
+    public int MaxVisibleChatBubbles { get; set; } = 2;
     public bool HideDistantPlayerNames { get; set; } = false;
     public float PlayerNameplateDistance { get; set; } = 20f;
     public bool ShowSpeechDirection { get; set; } = false;

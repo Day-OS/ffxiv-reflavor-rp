@@ -177,6 +177,8 @@ Messages containing item links, map links or auto-translate are kept in their na
 
 Enable **Incoming → Chat bubbles → Alternative chat bubbles** for overhead messages with character nameplates: white for speech, purple for actions and grey for OOC. Overlapping bubbles stack in conversation order, with older messages above newer ones.
 
+**Visible bubbles per character** defaults to **2**, adjustable from **1 to 10**. Only the oldest messages are displayed. Additional messages wait hidden without starting their timers and appear as earlier bubbles disappear. A circular badge overlaps the bottom-right corner of the bottom visible bubble and shows the number of hidden messages. Hover over the active bubble to pause its timer; clicking any bubble for that character expires the oldest one and advances the queue.
+
 Longer messages stay longer. Lower **Bubble reading speed (characters/s)** to give yourself more reading time. The side bar shows the active bubble's remaining time; timers slow down while bubbles are offscreen or hidden behind walls.
 
 Custom bubbles temporarily replace the game's native bubbles. Your previous native-bubble setting is restored when you disable them or unload the plugin.

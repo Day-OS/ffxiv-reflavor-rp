@@ -162,7 +162,13 @@ public class ConfigWindow : Window
             config.ChatBubbleReadingSpeed = readingSpeed;
             config.Save();
         }
-        ImGui.TextWrapped("Duration follows text length, with a 3-second minimum. Only the oldest message's timer runs; the next starts when it disappears.");
+        var maxVisibleBubbles = config.MaxVisibleChatBubbles;
+        if (ImGui.SliderInt("Visible bubbles per character", ref maxVisibleBubbles, 1, 10, "%d", ImGuiSliderFlags.AlwaysClamp))
+        {
+            config.MaxVisibleChatBubbles = maxVisibleBubbles;
+            config.Save();
+        }
+        ImGui.TextWrapped("Oldest messages appear first. Extra messages wait hidden; the bottom bubble shows how many are queued. Only the oldest timer runs. Hover to pause it; click a bubble to advance.");
 
         Section("Speech direction");
         DrawCheckbox("Indicate speech outside the camera view", config.ShowSpeechDirection,

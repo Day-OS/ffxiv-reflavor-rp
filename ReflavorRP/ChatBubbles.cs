@@ -16,7 +16,7 @@ public sealed class ChatBubbles(IObjectTable objects, IGameGui gameGui, Configur
 {
     internal sealed record Bubble(long Id, string Name, uint World, string Text, XivChatType Kind,
         long DurationMilliseconds, long ExpiresAt = 0, bool Speech = true, bool Ooc = false,
-        long LastUpdatedAt = 0, bool WasVisible = true);
+        long LastUpdatedAt = 0, bool WasVisible = true, bool WasHovered = false);
 
     internal readonly record struct BubbleBounds(Vector2 Min, Vector2 Max);
 
@@ -76,7 +76,8 @@ public sealed class ChatBubbles(IObjectTable objects, IGameGui gameGui, Configur
         var cameraManager = SceneCameraManager.Instance();
         var camera = cameraManager == null ? null : cameraManager->CurrentCamera;
         Vector3 cameraPosition = camera == null ? default : camera->Position;
-        var visible = new List<(Bubble Bubble, List<Bubble> Queue, Vector2 Tip, Vector2 Anchor, float Opacity)>();
+        var visible = new List<(Bubble Bubble, List<Bubble> Queue, Vector2 Tip, Vector2 Anchor, float Opacity,
+            bool HasTail, int HiddenCount)>();
         foreach (var (id, messages) in bubbles)
         {
             // Charge the previous frame's elapsed time before checking visibility again.
@@ -87,7 +88,7 @@ public sealed class ChatBubbles(IObjectTable objects, IGameGui gameGui, Configur
                 continue;
             }
 
-            messages[0] = messages[0] with { WasVisible = false };
+            messages[0] = messages[0] with { WasVisible = false, WasHovered = false };
 
             var latest = messages[^1];
             var character = localPlayer.EntityId == id ? localPlayer
@@ -127,8 +128,13 @@ public sealed class ChatBubbles(IObjectTable objects, IGameGui gameGui, Configur
             var offsetScale = referenceDistance / Math.Max(cameraDistance, 0.1f);
             var bubbleTip = screen - new Vector2(0, verticalOffset * scale * offsetScale);
             var anchor = bubbleTip - new Vector2(0, tailHeight * scale * offsetScale);
-            foreach (var bubble in messages)
-                visible.Add((bubble, messages, bubbleTip, anchor, distanceOpacity));
+            var visibleCount = Math.Min(messages.Count, Math.Clamp(config.MaxVisibleChatBubbles, 1, 10));
+            for (var index = 0; index < visibleCount; index++)
+            {
+                var bottom = index == visibleCount - 1;
+                visible.Add((messages[index], messages, bubbleTip, anchor, distanceOpacity,
+                    bottom, bottom ? messages.Count - visibleCount : 0));
+            }
         }
 
         // Place newer messages first, so every collision moves the older message above them.
@@ -139,7 +145,7 @@ public sealed class ChatBubbles(IObjectTable objects, IGameGui gameGui, Configur
             var anchor = item.Anchor;
             var bubbleTip = item.Tip;
             var isActive = bubble.ExpiresAt != 0;
-            var hasTail = bubble.Id == item.Queue[^1].Id;
+            var hasTail = item.HasTail;
             var opacity = isActive ? Math.Min(1f, (bubble.ExpiresAt - now) / 750f) : 1f;
             opacity *= item.Opacity;
             var isAction = !bubble.Speech && !bubble.Ooc;
@@ -164,6 +170,10 @@ public sealed class ChatBubbles(IObjectTable objects, IGameGui gameGui, Configur
             var heading = isTell ? "[Tell] " + bubble.Name : bubble.Name;
             const float headingScale = 0.8f;
             var headingSize = ImGui.CalcTextSize(heading) * headingScale;
+            var queueLabel = item.HiddenCount > 0 ? item.HiddenCount.ToString(CultureInfo.InvariantCulture) : "";
+            var queueLabelSize = ImGui.CalcTextSize(queueLabel) * headingScale;
+            var queueBadgeRadius = item.HiddenCount > 0
+                ? Math.Max(10 * scale, queueLabelSize.Length() / 2 + 3 * scale) : 0;
             var labelHeight = headingSize.Y + 2 * scale;
             // Keep the emote's 3px ornaments below the nameplate, then leave room for text.
             var actionOrnamentY = labelHeight / 2 + 7 * scale;
@@ -180,7 +190,8 @@ public sealed class ChatBubbles(IObjectTable objects, IGameGui gameGui, Configur
             // Include the nameplate, countdown bar and short tail in collision bounds.
             var bounds = new BubbleBounds(
                 new Vector2(anchor.X - width / 2, anchor.Y - windowHeight - labelHeight / 2 - scale),
-                new Vector2(anchor.X + width / 2 + 10 * scale, hasTail ? bubbleTip.Y : anchor.Y));
+                new Vector2(anchor.X + width / 2 + Math.Max(10 * scale, queueBadgeRadius + scale),
+                    Math.Max(hasTail ? bubbleTip.Y : anchor.Y, anchor.Y + queueBadgeRadius + scale)));
             var placement = PlaceAboveOverlaps(bounds, placed, 6 * scale);
             var shift = placement.Min.Y - bounds.Min.Y;
             anchor.Y += shift;
@@ -196,12 +207,13 @@ public sealed class ChatBubbles(IObjectTable objects, IGameGui gameGui, Configur
             ImGui.PushStyleColor(ImGuiCol.Text, textColor);
 
             var flags = ImGuiWindowFlags.NoDecoration | ImGuiWindowFlags.NoBackground |
-                ImGuiWindowFlags.NoInputs | ImGuiWindowFlags.NoSavedSettings | ImGuiWindowFlags.NoFocusOnAppearing |
+                ImGuiWindowFlags.NoNav | ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoScrollWithMouse |
+                ImGuiWindowFlags.NoSavedSettings | ImGuiWindowFlags.NoFocusOnAppearing |
                 ImGuiWindowFlags.NoBringToFrontOnFocus;
             if (ImGui.Begin($"###ReflavorRPBubble_{bubble.Id}", flags))
             {
                 if (isActive)
-                    item.Queue[0] = bubble with { WasVisible = true };
+                    item.Queue[0] = item.Queue[0] with { WasVisible = true };
                 var draw = ImGui.GetWindowDrawList();
                 var top = ImGui.GetWindowPos();
                 var size = ImGui.GetWindowSize();
@@ -220,7 +232,8 @@ public sealed class ChatBubbles(IObjectTable objects, IGameGui gameGui, Configur
                 ImGui.SetCursorPosY(ImGui.GetCursorPosY() + headingSpace);
                 ImGui.TextWrapped(bubble.Text);
                 // One drawing area includes the nameplate above and the bar and tail outside the box.
-                var clipBottom = top + size + new Vector2(10 * scale, thickness);
+                var clipBottom = top + size + new Vector2(Math.Max(10 * scale, queueBadgeRadius + thickness),
+                    Math.Max(thickness, queueBadgeRadius + thickness));
                 if (hasTail)
                     clipBottom.Y = Math.Max(clipBottom.Y, bubbleTip.Y + thickness);
                 draw.PushClipRect(top - new Vector2(scale, labelHeight / 2 + scale), clipBottom, false);
@@ -313,12 +326,36 @@ public sealed class ChatBubbles(IObjectTable objects, IGameGui gameGui, Configur
                     draw.AddLine(left, bubbleTip, decoration, thickness);
                     draw.AddLine(bubbleTip, right, decoration, thickness);
                 }
+                if (item.HiddenCount > 0)
+                {
+                    // Like the nameplate, the counter overlaps the body's border instead of taking text space.
+                    var center = top + size;
+                    draw.AddCircleFilled(center, queueBadgeRadius, backgroundColor);
+                    draw.AddCircle(center, queueBadgeRadius, decoration, 0, thickness);
+                    draw.AddText(ImGui.GetFont(), ImGui.GetFontSize() * headingScale,
+                        center - queueLabelSize / 2, ImGui.ColorConvertFloat4ToU32(headingColor), queueLabel);
+                }
                 draw.PopClipRect();
+                // A real ImGui item captures the click instead of also clicking the world behind it.
+                ImGui.SetCursorScreenPos(top);
+                if (ImGui.InvisibleButton("DismissBubble", size))
+                {
+                    // Expire the oldest (topmost) bubble; the normal timer update advances it next frame.
+                    item.Queue[0] = item.Queue[0] with
+                    {
+                        ExpiresAt = now, LastUpdatedAt = now, WasVisible = true, WasHovered = false,
+                    };
+                }
+                else if (isActive && ImGui.IsItemHovered())
+                    item.Queue[0] = item.Queue[0] with { WasHovered = true };
+                if (ImGui.IsItemHovered())
+                    ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
             }
             ImGui.End();
             ImGui.PopStyleColor();
             ImGui.PopStyleVar(3);
         }
+
     }
 
     internal static BubbleBounds PlaceAboveOverlaps(BubbleBounds bounds, IReadOnlyList<BubbleBounds> placed, float gap)
@@ -349,8 +386,9 @@ public sealed class ChatBubbles(IObjectTable objects, IGameGui gameGui, Configur
         {
             var active = messages[0];
             var elapsed = active.LastUpdatedAt == 0 ? 0 : Math.Max(0, now - active.LastUpdatedAt);
-            // Hidden bubbles consume their remaining time at roughly a quarter of normal speed.
-            var extraTime = active.WasVisible ? 0 : (long)Math.Round(elapsed * 0.75);
+            // Hover pauses the timer; hidden bubbles run at roughly a quarter of normal speed.
+            var extraTime = active.WasHovered ? elapsed
+                : active.WasVisible ? 0 : (long)Math.Round(elapsed * 0.75);
             messages[0] = active with { ExpiresAt = active.ExpiresAt + extraTime, LastUpdatedAt = now };
         }
 
