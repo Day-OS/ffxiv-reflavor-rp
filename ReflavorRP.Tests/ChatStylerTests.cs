@@ -7,6 +7,7 @@ using Dalamud.Plugin.Services;
 using Moq;
 using Xunit.Abstractions;
 using Builder = Lumina.Text.SeStringBuilder;
+using ChatPieces = System.Collections.Generic.IReadOnlyList<(bool Speech, string Text)>;
 
 namespace ReflavorRP.Tests;
 
@@ -15,7 +16,7 @@ public class ChatStylerTests : IDisposable
     private readonly Mock<IChatGui> chat = new();
     private readonly Mock<IObjectTable> objects = new();
     private readonly Mock<IPlayerCharacter> localPlayer = new();
-    private readonly Mock<Action<IChatMessage>> showChatBubble = new();
+    private readonly Mock<Action<IChatMessage, ChatPieces, bool>> showChatBubble = new();
     private readonly Mock<Action> playHighlightSound = new();
     private readonly Configuration config = new() { HighlightCharacterName = false };
     private readonly ChatStyler styler;
@@ -68,7 +69,7 @@ public class ChatStylerTests : IDisposable
         Assert.Equal(XivChatType.Echo, printed.Type);
         Assert.Equal(42, printed.Timestamp);
         Assert.Equal(input, message.Object.Message.TextValue);
-        showChatBubble.Verify(show => show(message.Object), Times.Once);
+        showChatBubble.Verify(show => show(message.Object, It.IsAny<ChatPieces>(), It.IsAny<bool>()), Times.Once);
         message.Verify(m => m.PreventOriginal(), Times.Once);
         chat.Verify(c => c.Print(It.IsAny<XivChatEntry>()), Times.Once);
         output.WriteLine($"Entrada: {input}");
@@ -81,8 +82,8 @@ public class ChatStylerTests : IDisposable
         var events = new List<string>();
         chat.Setup(c => c.Print(It.IsAny<XivChatEntry>()))
             .Callback<XivChatEntry>(entry => events.Add("chat: " + entry.Message.TextValue));
-        showChatBubble.Setup(show => show(It.IsAny<IChatMessage>()))
-            .Callback<IChatMessage>(message => events.Add("bubble: " + message.Message.TextValue));
+        showChatBubble.Setup(show => show(It.IsAny<IChatMessage>(), It.IsAny<ChatPieces>(), It.IsAny<bool>()))
+            .Callback<IChatMessage, ChatPieces, bool>((message, pieces, isOoc) => events.Add("bubble: " + message.Message.TextValue));
 
         Receive(XivChatType.Say, "\"First.\"");
         Receive(XivChatType.Say, "\"Second.\"");
@@ -92,6 +93,46 @@ public class ChatStylerTests : IDisposable
             "chat: Raih’li says: First.", "bubble: \"First.\"",
             "chat: Raih’li says: Second.", "bubble: \"Second.\"",
         }, events);
+    }
+
+    [Theory]
+    [InlineData(XivChatType.Say, "\"Hello.\" waves. \"Bye.\"")]
+    [InlineData(XivChatType.CustomEmote, "\"Hello.\" waves. \"Bye.\"")]
+    [InlineData(XivChatType.TellIncoming, "\"Hello.\" waves. \"Bye.\"")]
+    [InlineData(XivChatType.TellOutgoing, "\"Hello.\" waves. \"Bye.\"")]
+    [InlineData(XivChatType.Say, "Hello. *waves.* Bye.")]
+    public void SharesOrderedSpeechAndActionSegmentsWithBubbles(XivChatType kind, string text)
+    {
+        ChatPieces? actual = null;
+        showChatBubble.Setup(show => show(It.IsAny<IChatMessage>(), It.IsAny<ChatPieces>(), false))
+            .Callback<IChatMessage, ChatPieces, bool>((message, pieces, isOoc) => actual = pieces.ToArray());
+
+        Receive(kind, text);
+
+        Assert.NotNull(actual);
+        Assert.Equal(new[] { (true, "Hello."), (false, "waves."), (true, "Bye.") }, actual);
+    }
+
+    [Fact]
+    public void KeepsEmphasisAsSpeechBetweenNarrationSegments()
+    {
+        ChatPieces? actual = null;
+        showChatBubble.Setup(show => show(It.IsAny<IChatMessage>(), It.IsAny<ChatPieces>(), false))
+            .Callback<IChatMessage, ChatPieces, bool>((message, pieces, isOoc) => actual = pieces.ToArray());
+
+        Receive(XivChatType.CustomEmote, "smiles. \"I *really* mean it.\" nods.");
+
+        Assert.NotNull(actual);
+        Assert.Equal(new[] { (false, "smiles."), (true, "I *really* mean it."), (false, "nods.") }, actual);
+    }
+
+    [Fact]
+    public void IdentifiesOocForBubblesSeparatelyFromActions()
+    {
+        Receive(XivChatType.Say, "(( brb ))");
+
+        showChatBubble.Verify(show => show(It.IsAny<IChatMessage>(),
+            It.Is<ChatPieces>(pieces => pieces.Count == 1 && !pieces[0].Speech && pieces[0].Text == "brb"), true), Times.Once);
     }
 
     [Fact]
@@ -308,7 +349,7 @@ public class ChatStylerTests : IDisposable
         var message = Receive(kind, "WTS item");
 
         Assert.Null(printed);
-        showChatBubble.Verify(show => show(It.IsAny<IChatMessage>()), Times.Never);
+        showChatBubble.Verify(show => show(It.IsAny<IChatMessage>(), It.IsAny<ChatPieces>(), It.IsAny<bool>()), Times.Never);
         message.Verify(m => m.PreventOriginal(), Times.Never);
     }
 
@@ -320,7 +361,7 @@ public class ChatStylerTests : IDisposable
         var message = Receive(kind, "Hello!");
 
         Assert.Null(printed);
-        showChatBubble.Verify(show => show(It.IsAny<IChatMessage>()), Times.Never);
+        showChatBubble.Verify(show => show(It.IsAny<IChatMessage>(), It.IsAny<ChatPieces>(), It.IsAny<bool>()), Times.Never);
         message.Verify(m => m.PreventOriginal(), Times.Never);
         objects.VerifyGet(o => o.LocalPlayer, Times.Never);
     }
@@ -346,7 +387,7 @@ public class ChatStylerTests : IDisposable
         Assert.Null(printed);
         Assert.Same(original, message.Object.Message);
         playHighlightSound.Verify(play => play(), Times.Never);
-        showChatBubble.Verify(show => show(It.IsAny<IChatMessage>()), Times.Never);
+        showChatBubble.Verify(show => show(It.IsAny<IChatMessage>(), It.IsAny<ChatPieces>(), It.IsAny<bool>()), Times.Never);
         message.Verify(m => m.PreventOriginal(), Times.Never);
     }
 

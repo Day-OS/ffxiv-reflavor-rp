@@ -22,6 +22,9 @@ public class Configuration : IPluginConfiguration
     // incoming
     public bool StyleIncomingChat { get; set; } = true;
     public bool FadeByDistance { get; set; } = true;
+    public bool AlternativeChatBubbles { get; set; } = true;
+    public float ChatBubbleReadingSpeed { get; set; } = 10f;
+    public bool? NativeChatBubblesBeforeOverride { get; set; }
     public bool HighlightCharacterName { get; set; } = true;
     public string HighlightWords { get; set; } = "";
     public bool PlayHighlightSound { get; set; } = false;

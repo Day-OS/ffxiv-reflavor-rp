@@ -34,11 +34,11 @@ public sealed class ChatStyler : IDisposable
     private readonly IObjectTable objectTable;
     private readonly Configuration config;
     private readonly IPluginLog log;
-    private readonly Action<IChatMessage> showChatBubble;
+    private readonly Action<IChatMessage, IReadOnlyList<(bool Speech, string Text)>, bool> showChatBubble;
     private readonly Action playHighlightSound;
 
     public ChatStyler(IChatGui chatGui, IObjectTable objectTable, Configuration config, IPluginLog log,
-        Action<IChatMessage> showChatBubble, Action playHighlightSound)
+        Action<IChatMessage, IReadOnlyList<(bool Speech, string Text)>, bool> showChatBubble, Action playHighlightSound)
     {
         this.chatGui = chatGui;
         this.objectTable = objectTable;
@@ -185,7 +185,7 @@ public sealed class ChatStyler : IDisposable
             Message = line,
         });
         // Queue the replacement before scheduling the native bubble for the next frame.
-        showChatBubble(msg);
+        showChatBubble(msg, pieces, style == LineStyle.Ooc);
 
         var isOwnMessage = msg.LogKind == XivChatType.TellOutgoing || senderName.TextValue == localName;
         if (config.PlayHighlightSound && !isOwnMessage && highlights != null &&

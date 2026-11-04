@@ -150,6 +150,17 @@ public class ConfigWindow : Window
         DrawCheckbox("Darker text for distant players", config.FadeByDistance, v => config.FadeByDistance = v,
                      "The further away the speaker, the darker their line.");
 
+        Section("Chat bubbles");
+        DrawCheckbox("Alternative chat bubbles", config.AlternativeChatBubbles, v => config.AlternativeChatBubbles = v,
+                     "Shows plugin-drawn bubbles and temporarily disables native bubbles for all channels. Turning this off restores your previous game setting.");
+        var readingSpeed = config.ChatBubbleReadingSpeed;
+        if (ImGui.SliderFloat("Bubble reading speed (characters/s)", ref readingSpeed, 5f, 40f, "%.0f"))
+        {
+            config.ChatBubbleReadingSpeed = readingSpeed;
+            config.Save();
+        }
+        ImGui.TextWrapped("Duration follows text length, with a 3-second minimum. Only the oldest message's timer runs; the next starts when it disappears.");
+
         Section("Important words");
         DrawCheckbox("Highlight my character's name", config.HighlightCharacterName, v => config.HighlightCharacterName = v,
                      "Highlights your first and last name separately in gold when mentioned in a message.");

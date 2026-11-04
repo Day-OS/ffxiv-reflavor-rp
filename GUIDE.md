@@ -173,6 +173,14 @@ Your own lines remain at full brightness. Tell, Shout and Yell never fade. Playe
 
 Messages containing item links, map links or auto-translate are kept in their native format to preserve those features. This is expected.
 
+## Chat bubbles
+
+Enable **Incoming → Chat bubbles → Alternative chat bubbles** for overhead messages with character nameplates: white for speech, purple for actions and grey for OOC. Overlapping bubbles stack in conversation order, with older messages above newer ones.
+
+Longer messages stay longer. Lower **Bubble reading speed (characters/s)** to give yourself more reading time. The side bar shows the active bubble's remaining time; timers slow down while bubbles are offscreen or hidden behind walls.
+
+Custom bubbles temporarily replace the game's native bubbles. Your previous native-bubble setting is restored when you disable them or unload the plugin.
+
 ## Important words and name mentions
 
 Under **Incoming → Important words**, enable **Highlight my character's name** to highlight your first and last name independently. For a character named Legaia Lindblum, both `Legaia` and `Lindblum` are recognized, regardless of capitalization.

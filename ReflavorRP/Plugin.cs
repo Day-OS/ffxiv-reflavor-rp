@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Linq;
+using System.Collections.Generic;
 using Dalamud.Game.Chat;
 using Dalamud.Game.Command;
+using Dalamud.Game.Config;
 using Dalamud.Game.Text;
 using Dalamud.Game.Text.SeStringHandling.Payloads;
 using Dalamud.Hooking;
@@ -28,6 +30,8 @@ public sealed unsafe class Plugin : IDalamudPlugin
     [PluginService] internal static IPluginLog Log { get; private set; } = null!;
     [PluginService] internal static ITextureProvider TextureProvider { get; private set; } = null!;
     [PluginService] internal static IFramework Framework { get; private set; } = null!;
+    [PluginService] internal static IGameGui GameGui { get; private set; } = null!;
+    [PluginService] internal static IGameConfig GameConfig { get; private set; } = null!;
 
     private static readonly string[] Commands = ["/reflavor", "/reflavorrp", "/textrp"];
 
@@ -35,6 +39,7 @@ public sealed unsafe class Plugin : IDalamudPlugin
     private readonly WindowSystem windows = new("ReflavorRP");
     private readonly ConfigWindow configWindow;
     private readonly ChatStyler chatStyler;
+    private readonly ChatBubbles chatBubbles;
     private bool disposed;
 
     // CommandManager only gets commands the game doesn't know, so /me, /say etc. need a hook
@@ -44,6 +49,7 @@ public sealed unsafe class Plugin : IDalamudPlugin
     {
         config = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
 
+        chatBubbles = new ChatBubbles(ObjectTable, GameGui, config);
         configWindow = new ConfigWindow(config);
         windows.AddWindow(configWindow);
         chatStyler = new ChatStyler(ChatGui, ObjectTable, config, Log, ShowChatBubble,
@@ -52,6 +58,8 @@ public sealed unsafe class Plugin : IDalamudPlugin
         commandHook = GameInterop.HookFromAddress<ShellCommandModule.Delegates.ExecuteCommandInner>(
             (nint)ShellCommandModule.MemberFunctionPointers.ExecuteCommandInner, OnExecuteCommand);
         commandHook.Enable();
+        Framework.Update += UpdateNativeChatBubbles;
+        UpdateNativeChatBubbles(Framework);
 
         foreach (var cmd in Commands)
         {
@@ -62,6 +70,7 @@ public sealed unsafe class Plugin : IDalamudPlugin
             });
         }
 
+        PluginInterface.UiBuilder.Draw += chatBubbles.Draw;
         PluginInterface.UiBuilder.Draw += windows.Draw;
         PluginInterface.UiBuilder.OpenConfigUi += configWindow.Toggle;
         PluginInterface.UiBuilder.OpenMainUi += configWindow.Toggle;
@@ -70,6 +79,9 @@ public sealed unsafe class Plugin : IDalamudPlugin
     public void Dispose()
     {
         disposed = true;
+        Framework.Update -= UpdateNativeChatBubbles;
+        UpdateNativeChatBubbles(Framework);
+        PluginInterface.UiBuilder.Draw -= chatBubbles.Draw;
         PluginInterface.UiBuilder.Draw -= windows.Draw;
         PluginInterface.UiBuilder.OpenConfigUi -= configWindow.Toggle;
         PluginInterface.UiBuilder.OpenMainUi -= configWindow.Toggle;
@@ -82,8 +94,42 @@ public sealed unsafe class Plugin : IDalamudPlugin
         chatStyler.Dispose();
     }
 
-    private void ShowChatBubble(IChatMessage message)
+    private void UpdateNativeChatBubbles(IFramework _)
     {
+        const string option = nameof(UiConfigOption.LogChatBubbleEnableChatBubble);
+        var customActive = !disposed && config.Enabled && config.StyleIncomingChat && config.AlternativeChatBubbles;
+        if (customActive)
+        {
+            if (!GameConfig.UiConfig.TryGet(option, out bool nativeEnabled))
+                return;
+            if (config.NativeChatBubblesBeforeOverride == null)
+            {
+                // Save before changing the game setting, including across an interrupted session.
+                config.NativeChatBubblesBeforeOverride = nativeEnabled;
+                config.Save();
+            }
+            if (nativeEnabled)
+                GameConfig.UiConfig.Set(option, false);
+        }
+        else if (config.NativeChatBubblesBeforeOverride is bool previousValue)
+        {
+            if (!GameConfig.UiConfig.TryGet(option, out bool nativeEnabled))
+                return;
+            if (nativeEnabled != previousValue)
+                GameConfig.UiConfig.Set(option, previousValue);
+            config.NativeChatBubblesBeforeOverride = null;
+            config.Save();
+        }
+    }
+
+    private void ShowChatBubble(IChatMessage message, IReadOnlyList<(bool Speech, string Text)> pieces, bool isOoc)
+    {
+        if (config.AlternativeChatBubbles)
+        {
+            chatBubbles.Add(message, pieces, isOoc);
+            return;
+        }
+
         var player = message.Sender.Payloads.OfType<PlayerPayload>().FirstOrDefault();
         // Outgoing Tell identifies its recipient; unlinked public senders are ourselves.
         var isLocalPlayer = message.LogKind == XivChatType.TellOutgoing || player == null;
@@ -97,7 +143,7 @@ public sealed unsafe class Plugin : IDalamudPlugin
         var worldId = (ushort)(player?.World.RowId ?? 0);
         _ = Framework.RunOnTick(() =>
         {
-            if (disposed || !config.Enabled || !config.StyleIncomingChat)
+            if (disposed || !config.Enabled || !config.StyleIncomingChat || config.AlternativeChatBubbles)
                 return;
             var logModule = RaptureLogModule.Instance();
             if (logModule == null)
