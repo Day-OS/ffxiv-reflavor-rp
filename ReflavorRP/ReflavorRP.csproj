@@ -13,6 +13,10 @@
   </PropertyGroup>
   <ItemGroup>
     <EmbeddedResource Include="..\Data\logo.png" LogicalName="ReflavorRP.Logo.png" />
+    <EmbeddedResource Include="..\Data\Audio\speech-notification.pcm" LogicalName="ReflavorRP.SpeechNotification.pcm" />
+    <Reference Include="TerraFX.Interop.Windows" HintPath="$(DalamudLibPath)TerraFX.Interop.Windows.dll" Private="false" />
+    <None Include="..\Data\Audio\ATTRIBUTION.md" Link="Audio/ATTRIBUTION.md" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\Data\Audio\CC-BY-NC-SA-3.0.txt" Link="Audio/CC-BY-NC-SA-3.0.txt" CopyToOutputDirectory="PreserveNewest" />
     <InternalsVisibleTo Include="ReflavorRP.Tests" />
   </ItemGroup>
 </Project>

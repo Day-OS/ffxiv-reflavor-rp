@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 using Dalamud.Configuration;
 
 namespace ReflavorRP;
@@ -24,6 +25,21 @@ public class Configuration : IPluginConfiguration
     public bool FadeByDistance { get; set; } = true;
     public bool AlternativeChatBubbles { get; set; } = true;
     public float ChatBubbleReadingSpeed { get; set; } = 10f;
+    public bool HideDistantPlayerNames { get; set; } = false;
+    public float PlayerNameplateDistance { get; set; } = 20f;
+    public bool ShowSpeechDirection { get; set; } = false;
+    public float SpeechDirectionRange { get; set; } = 30f;
+    public Vector3 SpeechDirectionColor { get; set; } = new(0.76f, 0.64f, 0.85f);
+    public float SpeechDirectionOpacity { get; set; } = 0.70f;
+    public float SpeechDirectionWidth { get; set; } = 250f;
+    public float SpeechDirectionHeight { get; set; } = 1.0f;
+    public bool PlaySpeechSound { get; set; } = false;
+    public float SpeechSoundVolume { get; set; } = 1f;
+    public float SpeechSoundRange { get; set; } = 30f;
+
+    // Migrate the sound settings from when they were tied to the offscreen indicator.
+    public bool PlaySpeechDirectionSound { set => PlaySpeechSound = value; }
+    public float SpeechDirectionSoundVolume { set => SpeechSoundVolume = value; }
     public bool? NativeChatBubblesBeforeOverride { get; set; }
     public bool HighlightCharacterName { get; set; } = true;
     public string HighlightWords { get; set; } = "";

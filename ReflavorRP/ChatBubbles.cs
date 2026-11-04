@@ -4,13 +4,10 @@ using System.Globalization;
 using System.Linq;
 using System.Numerics;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Game.Chat;
 using Dalamud.Game.ClientState.Objects.SubKinds;
 using Dalamud.Game.Text;
-using Dalamud.Game.Text.SeStringHandling.Payloads;
 using Dalamud.Interface.Utility;
 using Dalamud.Plugin.Services;
-using NativeGameObject = FFXIVClientStructs.FFXIV.Client.Game.Object.GameObject;
 using SceneCameraManager = FFXIVClientStructs.FFXIV.Client.Graphics.Scene.CameraManager;
 
 namespace ReflavorRP;
@@ -26,13 +23,11 @@ public sealed class ChatBubbles(IObjectTable objects, IGameGui gameGui, Configur
     private readonly Dictionary<uint, List<Bubble>> bubbles = [];
     private long nextBubbleId;
 
-    public void Add(IChatMessage message, IReadOnlyList<(bool Speech, string Text)> pieces, bool isOoc)
+    public void Add(StyledChatMessage message)
     {
-        var player = message.Sender.Payloads.OfType<PlayerPayload>().FirstOrDefault();
-        var speaker = message.LogKind == XivChatType.TellOutgoing || player == null
-            ? objects.LocalPlayer
-            : objects.PlayerObjects.OfType<IPlayerCharacter>().FirstOrDefault(character =>
-                character.Name.TextValue == player.PlayerName && character.HomeWorld.RowId == player.World.RowId);
+        var speaker = message.Speaker;
+        var pieces = message.Pieces;
+        var isOoc = message.IsOoc;
         if (speaker == null || pieces.Count == 0)
             return;
 
@@ -56,12 +51,12 @@ public sealed class ChatBubbles(IObjectTable objects, IGameGui gameGui, Configur
                 text = "(( " + content + " ))";
             else if (!speech)
             {
-                if (message.LogKind == XivChatType.CustomEmote)
+                if (message.Kind == XivChatType.CustomEmote)
                     text = name + " " + text;
                 text = "* " + text;
             }
             var duration = GetDurationMilliseconds(text, config.ChatBubbleReadingSpeed);
-            messages.Add(new Bubble(nextBubbleId++, name, world, text, message.LogKind,
+            messages.Add(new Bubble(nextBubbleId++, name, world, text, message.Kind,
                 duration, Speech: speech, Ooc: isOoc));
         }
         AdvanceQueue(messages, now);
@@ -107,7 +102,7 @@ public sealed class ChatBubbles(IObjectTable objects, IGameGui gameGui, Configur
             if (camera == null)
                 continue;
 
-            var height = Math.Clamp(((NativeGameObject*)character.Address)->Height, 0.5f, 5f);
+            var height = ChatSpatial.GetCharacterHeight(character);
             var head = character.Position + new Vector3(0, height + 0.25f, 0);
             if (!gameGui.WorldToScreen(head, out var screen))
                 continue;
@@ -123,8 +118,7 @@ public sealed class ChatBubbles(IObjectTable objects, IGameGui gameGui, Configur
 
             // Gradually fade from 3 to 30 yalms, keeping text at its normal size.
             var distance = Vector3.Distance(localPlayer.Position, character.Position);
-            var distanceFade = Math.Clamp((distance - 3f) / 27f, 0f, 1f);
-            var distanceOpacity = 1f - 0.7f * distanceFade;
+            var distanceOpacity = 0.3f + 0.7f * ChatSpatial.GetDistanceStrength(distance, 30);
             // Pixel offsets at the reference camera distance; no maximum as the camera approaches.
             const float referenceDistance = 18f;
             const float verticalOffset = 60f;

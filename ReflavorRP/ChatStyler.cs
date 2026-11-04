@@ -34,17 +34,17 @@ public sealed class ChatStyler : IDisposable
     private readonly IObjectTable objectTable;
     private readonly Configuration config;
     private readonly IPluginLog log;
-    private readonly Action<IChatMessage, IReadOnlyList<(bool Speech, string Text)>, bool> showChatBubble;
+    private readonly Action<StyledChatMessage> presentMessage;
     private readonly Action playHighlightSound;
 
     public ChatStyler(IChatGui chatGui, IObjectTable objectTable, Configuration config, IPluginLog log,
-        Action<IChatMessage, IReadOnlyList<(bool Speech, string Text)>, bool> showChatBubble, Action playHighlightSound)
+        Action<StyledChatMessage> presentMessage, Action playHighlightSound)
     {
         this.chatGui = chatGui;
         this.objectTable = objectTable;
         this.config = config;
         this.log = log;
-        this.showChatBubble = showChatBubble;
+        this.presentMessage = presentMessage;
         this.playHighlightSound = playHighlightSound;
         chatGui.ChatMessage += OnChatMessage;
     }
@@ -77,20 +77,19 @@ public sealed class ChatStyler : IDisposable
 
         var isTell = msg.LogKind is XivChatType.TellIncoming or XivChatType.TellOutgoing;
         var isShout = msg.LogKind is XivChatType.Shout or XivChatType.Yell;
-        IPlayerCharacter? nearbySpeaker = null;
-        if (isShout || (!isTell && config.FadeByDistance))
-            nearbySpeaker = FindSpeaker(msg.Sender);
+        var localPlayer = objectTable.LocalPlayer;
+        // Resolve the author once for chat styling, bubbles, visual cues and speech sound.
+        var speaker = msg.LogKind == XivChatType.TellOutgoing ? localPlayer : FindSpeaker(msg.Sender, localPlayer);
 
         // Only restyle RP shouts; their brightness does not depend on distance.
-        if (isShout && !IsRoleplaying(nearbySpeaker))
+        if (isShout && !IsRoleplaying(speaker))
             return;
 
-        var fade = !isTell && !isShout && config.FadeByDistance ? DistanceFade(nearbySpeaker) : 1f;
+        var fade = !isTell && !isShout && config.FadeByDistance ? DistanceFade(speaker, localPlayer) : 1f;
 
         var senderName = WithoutWorld(msg.Sender);
         var authorName = senderName;
-        var localName = config.HighlightCharacterName || config.PlayHighlightSound || msg.LogKind == XivChatType.TellOutgoing
-            ? objectTable.LocalPlayer?.Name.TextValue : null;
+        var localName = localPlayer?.Name.TextValue;
         if (msg.LogKind == XivChatType.TellOutgoing)
         {
             authorName = string.IsNullOrWhiteSpace(localName) ? "Your character" : localName;
@@ -185,9 +184,9 @@ public sealed class ChatStyler : IDisposable
             Message = line,
         });
         // Queue the replacement before scheduling the native bubble for the next frame.
-        showChatBubble(msg, pieces, style == LineStyle.Ooc);
-
         var isOwnMessage = msg.LogKind == XivChatType.TellOutgoing || senderName.TextValue == localName;
+        presentMessage(new StyledChatMessage(msg, pieces, style == LineStyle.Ooc, speaker, isOwnMessage));
+
         if (config.PlayHighlightSound && !isOwnMessage && highlights != null &&
             pieces.Any(piece => highlights.IsMatch(piece.Text)))
             playHighlightSound();
@@ -323,12 +322,12 @@ public sealed class ChatStyler : IDisposable
     }
 
     // null when they're too far away to be loaded
-    private IPlayerCharacter? FindSpeaker(SeString sender)
+    private IPlayerCharacter? FindSpeaker(SeString sender, IPlayerCharacter? localPlayer)
     {
         // our own lines have no player link
         var player = sender.Payloads.OfType<PlayerPayload>().FirstOrDefault();
         if (player == null)
-            return objectTable.LocalPlayer;
+            return localPlayer;
 
         return objectTable.PlayerObjects
             .OfType<IPlayerCharacter>()
@@ -342,15 +341,14 @@ public sealed class ChatStyler : IDisposable
         return speaker?.OnlineStatus.RowId == roleplayingStatusRowId;
     }
 
-    private float DistanceFade(IPlayerCharacter? speaker)
+    private static float DistanceFade(IPlayerCharacter? speaker, IPlayerCharacter? localPlayer)
     {
         if (speaker == null)
             return 1f;
-        var me = objectTable.LocalPlayer;
-        if (me == null)
+        if (localPlayer == null)
             return 1f;
 
-        var distance = Vector3.Distance(me.Position, speaker.Position);
+        var distance = Vector3.Distance(localPlayer.Position, speaker.Position);
         if (distance < 4)
             return 1f;
         if (distance < 8)

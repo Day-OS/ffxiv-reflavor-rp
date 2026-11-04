@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="1000" viewBox="0 0 1400 1000" role="img" aria-labelledby="title description">
+  <title id="title">Teste do indicador de fala fora da tela</title>
+  <desc id="description">Indicador de fala: uma mancha roxa de 180 pixels de largura na borda esquerda, com opacidade máxima de 65% para uma pessoa a 3 yalms, e uma mancha mais fraca à direita, com 24% para uma pessoa a 20 yalms. O alcance está em 30 yalms. As intensidades correspondem ao código; a cena de fundo é uma ilustração.</desc>
+  <defs>
+    <linearGradient id="sky" x2="0" y2="1"><stop stop-color="#202633"/><stop offset="1" stop-color="#42434A"/></linearGradient>
+    <linearGradient id="ground" x2="0" y2="1"><stop stop-color="#34363E"/><stop offset="1" stop-color="#20232B"/></linearGradient>
+    <linearGradient id="glow" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#C2A3D9" stop-opacity="1.00000"/>
+      <stop offset="0.08333333333333333" stop-color="#C2A3D9" stop-opacity="0.84028"/>
+      <stop offset="0.16666666666666666" stop-color="#C2A3D9" stop-opacity="0.69444"/>
+      <stop offset="0.25" stop-color="#C2A3D9" stop-opacity="0.56250"/>
+      <stop offset="0.3333333333333333" stop-color="#C2A3D9" stop-opacity="0.44444"/>
+      <stop offset="0.4166666666666667" stop-color="#C2A3D9" stop-opacity="0.34028"/>
+      <stop offset="0.5" stop-color="#C2A3D9" stop-opacity="0.25000"/>
+      <stop offset="0.5833333333333334" stop-color="#C2A3D9" stop-opacity="0.17361"/>
+      <stop offset="0.6666666666666666" stop-color="#C2A3D9" stop-opacity="0.11111"/>
+      <stop offset="0.75" stop-color="#C2A3D9" stop-opacity="0.06250"/>
+      <stop offset="0.8333333333333334" stop-color="#C2A3D9" stop-opacity="0.02778"/>
+      <stop offset="0.9166666666666666" stop-color="#C2A3D9" stop-opacity="0.00694"/>
+      <stop offset="1" stop-color="#C2A3D9" stop-opacity="0.00000"/>
+    </linearGradient>
+    <linearGradient id="vertical" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff" stop-opacity="0.00000"/>
+      <stop offset="0.0625" stop-color="#fff" stop-opacity="0.05493"/>
+      <stop offset="0.125" stop-color="#fff" stop-opacity="0.19141"/>
+      <stop offset="0.1875" stop-color="#fff" stop-opacity="0.37134"/>
+      <stop offset="0.25" stop-color="#fff" stop-opacity="0.56250"/>
+      <stop offset="0.3125" stop-color="#fff" stop-opacity="0.73853"/>
+      <stop offset="0.375" stop-color="#fff" stop-opacity="0.87891"/>
+      <stop offset="0.4375" stop-color="#fff" stop-opacity="0.96899"/>
+      <stop offset="0.5" stop-color="#fff" stop-opacity="1.00000"/>
+      <stop offset="0.5625" stop-color="#fff" stop-opacity="0.96899"/>
+      <stop offset="0.625" stop-color="#fff" stop-opacity="0.87891"/>
+      <stop offset="0.6875" stop-color="#fff" stop-opacity="0.73853"/>
+      <stop offset="0.75" stop-color="#fff" stop-opacity="0.56250"/>
+      <stop offset="0.8125" stop-color="#fff" stop-opacity="0.37134"/>
+      <stop offset="0.875" stop-color="#fff" stop-opacity="0.19141"/>
+      <stop offset="0.9375" stop-color="#fff" stop-opacity="0.05493"/>
+      <stop offset="1" stop-color="#fff" stop-opacity="0.00000"/>
+    </linearGradient>
+    <mask id="softEnds" maskContentUnits="objectBoundingBox"><rect width="1" height="1" fill="url(#vertical)"/></mask>
+    <clipPath id="screen"><rect width="1280" height="720"/></clipPath>
+  </defs>
+  <rect width="1400" height="1000" fill="#15141B"/>
+  <g font-family="Segoe UI, Arial, sans-serif" fill="#E6E6E6">
+    <text x="60" y="44" font-size="25" font-weight="600">Indicador de fala fora da tela</text>
+    <text x="60" y="75" font-size="16" fill="#AAA6B6">Variante mais visível · faixa de 180 px · alcance de 30 yalms · intensidade máxima do aviso</text>
+    <text x="60" y="113" font-size="16" fill="#C2A3D9">Voz à esquerda · 3 yalms · opacidade máxima de 65%</text>
+    <text x="1340" y="113" text-anchor="end" font-size="16" fill="#C2A3D9">Voz à direita · 20 yalms · opacidade máxima de 24%</text>
+  </g>
+  <g transform="translate(60 132)" clip-path="url(#screen)">
+    <!-- Schematic backdrop, not a screenshot of FFXIV. -->
+    <rect width="1280" height="720" fill="url(#sky)"/>
+    <path d="M0 350V164H130V124H270V210H394V154H460V350ZM840 350V180H1010V140H1120V190H1280V350Z" fill="#292D37"/>
+    <path d="M0 350H1280V720H0Z" fill="url(#ground)"/>
+    <path d="M390 720L580 350H700L890 720Z" fill="#41424A" opacity="0.6"/>
+    <g stroke="#65636C" stroke-opacity="0.18" fill="none">
+      <path d="M0 410H1280M0 505H1280M0 650H1280M640 350V720M580 350L390 720M700 350L890 720"/>
+    </g>
+    <g fill="#1C2028">
+      <path d="M90 350V245H190V350ZM1090 350V245H1190V350Z"/>
+      <path d="M65 245L140 210L215 245ZM1065 245L1140 210L1215 245Z"/>
+    </g>
+    <g fill="#C9AC76" fill-opacity="0.35"><rect x="122" y="275" width="36" height="45"/><rect x="1122" y="275" width="36" height="45"/></g>
+    <ellipse cx="640" cy="624" rx="49" ry="12" fill="#11131A" opacity="0.45"/>
+    <g fill="#171B24" stroke="#555763" stroke-width="1.5">
+      <circle cx="640" cy="470" r="17"/>
+      <path d="M622 489Q640 482 658 489L668 559L656 568L653 620H641L638 573L632 620H620L624 563L612 558Z"/>
+    </g>
+    <!-- Matches DrawEdge at 100% UI scale in a 1280px viewport. -->
+    <rect x="0" y="144" width="180" height="432" fill="url(#glow)" mask="url(#softEnds)" opacity="0.65"/>
+    <g transform="translate(1280 0) scale(-1 1)">
+      <rect x="0" y="144" width="180" height="432" fill="url(#glow)" mask="url(#softEnds)" opacity="0.24074"/>
+    </g>
+    <g font-family="Segoe UI, Arial, sans-serif" fill="#AAA6B6" font-size="14">
+      <text x="640" y="36" text-anchor="middle">CAMPO DE VISÃO DA CÂMERA</text>
+      <text x="640" y="673" text-anchor="middle">Seu personagem</text>
+    </g>
+  </g>
+  <rect x="59.5" y="131.5" width="1281" height="721" fill="none" stroke="#4A4355"/>
+  <g font-family="Segoe UI, Arial, sans-serif" fill="#E6E6E6" font-size="17">
+    <text x="60" y="892">A borda indica para onde virar a câmera. Quanto mais longe a voz, mais fraco o brilho.</text>
+    <text x="60" y="923" fill="#AAA6B6">No jogo, o aviso entra suavemente e desaparece ao olhar para a pessoa ou após cerca de 4 segundos.</text>
+    <text x="60" y="957" font-size="14" fill="#807B8C">Teste visual com as intensidades do código. Cena esquemática, sem captura do jogo.</text>
+  </g>
+</svg>

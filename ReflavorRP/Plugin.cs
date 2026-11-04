@@ -32,6 +32,7 @@ public sealed unsafe class Plugin : IDalamudPlugin
     [PluginService] internal static IFramework Framework { get; private set; } = null!;
     [PluginService] internal static IGameGui GameGui { get; private set; } = null!;
     [PluginService] internal static IGameConfig GameConfig { get; private set; } = null!;
+    [PluginService] internal static INamePlateGui NamePlateGui { get; private set; } = null!;
 
     private static readonly string[] Commands = ["/reflavor", "/reflavorrp", "/textrp"];
 
@@ -40,6 +41,10 @@ public sealed unsafe class Plugin : IDalamudPlugin
     private readonly ConfigWindow configWindow;
     private readonly ChatStyler chatStyler;
     private readonly ChatBubbles chatBubbles;
+    private readonly SpeechDirectionIndicators speechDirectionIndicators;
+    private readonly SpeechNotificationSound speechNotificationSound;
+    private readonly SpeechSounds speechSounds;
+    private readonly NamePlateVisibility namePlateVisibility;
     private bool disposed;
 
     // CommandManager only gets commands the game doesn't know, so /me, /say etc. need a hook
@@ -50,9 +55,13 @@ public sealed unsafe class Plugin : IDalamudPlugin
         config = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
 
         chatBubbles = new ChatBubbles(ObjectTable, GameGui, config);
-        configWindow = new ConfigWindow(config);
+        speechNotificationSound = new SpeechNotificationSound(Log);
+        speechSounds = new SpeechSounds(ObjectTable, config, speechNotificationSound.Play, speechNotificationSound.PlayCentered);
+        speechDirectionIndicators = new SpeechDirectionIndicators(ObjectTable, GameGui, config);
+        namePlateVisibility = new NamePlateVisibility(NamePlateGui, ObjectTable, config, Framework, Log);
+        configWindow = new ConfigWindow(config, speechDirectionIndicators.Preview);
         windows.AddWindow(configWindow);
-        chatStyler = new ChatStyler(ChatGui, ObjectTable, config, Log, ShowChatBubble,
+        chatStyler = new ChatStyler(ChatGui, ObjectTable, config, Log, PresentMessage,
             () => UIGlobals.PlayChatSoundEffect(1));
 
         commandHook = GameInterop.HookFromAddress<ShellCommandModule.Delegates.ExecuteCommandInner>(
@@ -71,6 +80,7 @@ public sealed unsafe class Plugin : IDalamudPlugin
         }
 
         PluginInterface.UiBuilder.Draw += chatBubbles.Draw;
+        PluginInterface.UiBuilder.Draw += speechDirectionIndicators.Draw;
         PluginInterface.UiBuilder.Draw += windows.Draw;
         PluginInterface.UiBuilder.OpenConfigUi += configWindow.Toggle;
         PluginInterface.UiBuilder.OpenMainUi += configWindow.Toggle;
@@ -79,9 +89,12 @@ public sealed unsafe class Plugin : IDalamudPlugin
     public void Dispose()
     {
         disposed = true;
+        namePlateVisibility.Dispose();
         Framework.Update -= UpdateNativeChatBubbles;
         UpdateNativeChatBubbles(Framework);
         PluginInterface.UiBuilder.Draw -= chatBubbles.Draw;
+        PluginInterface.UiBuilder.Draw -= speechDirectionIndicators.Draw;
+        speechNotificationSound.Dispose();
         PluginInterface.UiBuilder.Draw -= windows.Draw;
         PluginInterface.UiBuilder.OpenConfigUi -= configWindow.Toggle;
         PluginInterface.UiBuilder.OpenMainUi -= configWindow.Toggle;
@@ -122,24 +135,41 @@ public sealed unsafe class Plugin : IDalamudPlugin
         }
     }
 
-    private void ShowChatBubble(IChatMessage message, IReadOnlyList<(bool Speech, string Text)> pieces, bool isOoc)
+    private void PresentMessage(StyledChatMessage message)
     {
+        if (message.HasSpeech && !message.IsOwn)
+        {
+            if (message.Kind == XivChatType.TellIncoming)
+            {
+                speechSounds.AddTell();
+            }
+            else
+            {
+                var speaker = message.Speaker;
+                if (!message.IsTell && speaker != null && speaker.EntityId != ObjectTable.LocalPlayer?.EntityId)
+                {
+                    speechSounds.Add(speaker);
+                    speechDirectionIndicators.Add(speaker);
+                }
+            }
+        }
         if (config.AlternativeChatBubbles)
         {
-            chatBubbles.Add(message, pieces, isOoc);
+            chatBubbles.Add(message);
             return;
         }
 
-        var player = message.Sender.Payloads.OfType<PlayerPayload>().FirstOrDefault();
+        var source = message.Source;
+        var player = source.Sender.Payloads.OfType<PlayerPayload>().FirstOrDefault();
         // Outgoing Tell identifies its recipient; unlinked public senders are ourselves.
-        var isLocalPlayer = message.LogKind == XivChatType.TellOutgoing || player == null;
+        var isLocalPlayer = message.Kind == XivChatType.TellOutgoing || player == null;
         var senderName = isLocalPlayer ? ObjectTable.LocalPlayer?.Name.TextValue : player!.PlayerName;
         if (string.IsNullOrWhiteSpace(senderName))
             return;
 
         // Dalamud reuses IChatMessage; capture values now, never retain the event object.
-        var chatType = (ushort)message.LogKind;
-        var messageBytes = message.Message.Encode();
+        var chatType = (ushort)message.Kind;
+        var messageBytes = source.Message.Encode();
         var worldId = (ushort)(player?.World.RowId ?? 0);
         _ = Framework.RunOnTick(() =>
         {

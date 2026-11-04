@@ -37,13 +37,16 @@ public class ConfigWindow : Window
     private const int ThemeVarCount = 4; // keep in sync with PreDraw
 
     private readonly Configuration config;
+    private readonly Action previewSpeechDirection;
 
     private int editingAccent = -1;
     private string previewText = "Sorry, I really love this nice place!";
+    private float? nameplateDistanceDraft;
 
-    public ConfigWindow(Configuration config) : base("ReflavorRP###ReflavorRP config")
+    public ConfigWindow(Configuration config, Action previewSpeechDirection) : base("ReflavorRP###ReflavorRP config")
     {
         this.config = config;
+        this.previewSpeechDirection = previewSpeechDirection;
 
         Flags = ImGuiWindowFlags.NoCollapse;
         Size = new Vector2(460, 420);
@@ -160,6 +163,90 @@ public class ConfigWindow : Window
             config.Save();
         }
         ImGui.TextWrapped("Duration follows text length, with a 3-second minimum. Only the oldest message's timer runs; the next starts when it disappears.");
+
+        Section("Speech direction");
+        DrawCheckbox("Indicate speech outside the camera view", config.ShowSpeechDirection,
+                     v => config.ShowSpeechDirection = v,
+                     "Briefly lights the left or right screen edge when another player speaks offscreen. Fades with distance. Ignores Tell, OOC and actions without dialogue.");
+        var indicatorColor = config.SpeechDirectionColor;
+        if (ImGui.ColorEdit3("Indicator color", ref indicatorColor))
+        {
+            config.SpeechDirectionColor = indicatorColor;
+            config.Save();
+        }
+        var indicatorWidth = config.SpeechDirectionWidth;
+        if (ImGui.SliderFloat("Indicator width", ref indicatorWidth, 20, 600, "%.0f px", ImGuiSliderFlags.AlwaysClamp))
+        {
+            config.SpeechDirectionWidth = indicatorWidth;
+            config.Save();
+        }
+        var indicatorHeight = config.SpeechDirectionHeight * 100;
+        if (ImGui.SliderFloat("Indicator height", ref indicatorHeight, 10, 100, "%.0f%%", ImGuiSliderFlags.AlwaysClamp))
+        {
+            config.SpeechDirectionHeight = indicatorHeight / 100;
+            config.Save();
+        }
+        var indicatorOpacity = config.SpeechDirectionOpacity * 100;
+        if (ImGui.SliderFloat("Indicator opacity", ref indicatorOpacity, 0, 100, "%.0f%%", ImGuiSliderFlags.AlwaysClamp))
+        {
+            config.SpeechDirectionOpacity = indicatorOpacity / 100;
+            config.Save();
+        }
+        if (ImGui.Button("Preview indicator (4 seconds)"))
+            previewSpeechDirection();
+        ImGui.TextWrapped("Shows both screen edges at nearby-speaker strength, without sound. Adjust the settings during the preview to see changes live.");
+        if (config.ShowSpeechDirection)
+        {
+            var speechRange = config.SpeechDirectionRange;
+            if (ImGui.SliderFloat("Speech indicator range (yalms)", ref speechRange, 5f, 100f, "%.0f"))
+            {
+                config.SpeechDirectionRange = speechRange;
+                config.Save();
+            }
+        }
+
+        Section("Speech sounds");
+        DrawCheckbox("Play a quiet sound for speech", config.PlaySpeechSound,
+                     v => config.PlaySpeechSound = v,
+                     "Plays a short sound for other players' public speech and incoming Tell dialogue. Public speech follows the speaker's position; Tell plays centered regardless of distance. Ignores OOC and actions without dialogue. At most one cue every 1.5 seconds.");
+        if (config.PlaySpeechSound)
+        {
+            var speechVolume = config.SpeechSoundVolume * 100;
+            if (ImGui.SliderFloat("Speech sound volume", ref speechVolume, 0, 200, "%.0f%%"))
+            {
+                config.SpeechSoundVolume = speechVolume / 100;
+                config.Save();
+            }
+            var speechSoundRange = config.SpeechSoundRange;
+            if (ImGui.SliderFloat("Public speech sound range (yalms)", ref speechSoundRange, 5f, 100f, "%.0f"))
+            {
+                config.SpeechSoundRange = speechSoundRange;
+                config.Save();
+            }
+        }
+
+        Section("Player nameplates");
+        DrawCheckbox("Hide distant players' names and titles", config.HideDistantPlayerNames,
+                     v => config.HideDistantPlayerNames = v,
+                     "Hides other players' overhead name text, titles and FC tags beyond the chosen distance. Does not change native nameplate settings, HP bars, NPCs, enemies or your own name.");
+        if (config.HideDistantPlayerNames)
+        {
+            var nameplateDistance = nameplateDistanceDraft ?? config.PlayerNameplateDistance;
+            if (ImGui.SliderFloat("Nameplate distance (yalms)", ref nameplateDistance, 5f, 100f, "%.0f",
+                    ImGuiSliderFlags.AlwaysClamp))
+                nameplateDistanceDraft = nameplateDistance;
+            if (ImGui.IsItemDeactivatedAfterEdit() && nameplateDistanceDraft is { } distance)
+            {
+                config.PlayerNameplateDistance = distance;
+                config.Save();
+                nameplateDistanceDraft = null;
+            }
+            ImGui.TextDisabled("Applies when you release the slider or finish editing.");
+        }
+        else
+        {
+            nameplateDistanceDraft = null;
+        }
 
         Section("Important words");
         DrawCheckbox("Highlight my character's name", config.HighlightCharacterName, v => config.HighlightCharacterName = v,

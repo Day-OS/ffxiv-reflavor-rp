@@ -181,6 +181,30 @@ Longer messages stay longer. Lower **Bubble reading speed (characters/s)** to gi
 
 Custom bubbles temporarily replace the game's native bubbles. Your previous native-bubble setting is restored when you disable them or unload the plugin.
 
+## Offscreen speech direction
+
+Under **Incoming → Speech direction**, enable **Indicate speech outside the camera view** for a soft purple glow on the left or right screen edge when another loaded player speaks outside your camera view. Look toward the speaker to dismiss the glow. A speaker directly behind you can light both sides.
+
+Customize **Indicator color**, **Indicator width** (20–600 scaled pixels), **Indicator height** (10–100% of the screen) and **Indicator opacity** (0–100%). Defaults are purple, 180 pixels wide, 60% height and 65% opacity. Width is capped at half the screen. Distance and fade timing still reduce the chosen opacity during normal use.
+
+Click **Preview indicator (4 seconds)** to show both screen edges without a message or sound. The preview works even with the indicator disabled and reflects appearance changes immediately; click again to restart it.
+
+The cue lasts up to four seconds, fades in and out, and gets weaker with distance from your character. **Speech indicator range (yalms)** sets where it fades to zero (default: **30**, adjustable from **5 to 100**). Multiple speakers on the same side do not stack the brightness.
+
+This option is off by default and requires **GTA World style chat**. It works with either native or alternative chat bubbles. It only responds to public dialogue processed by the plugin, including quoted speech inside emotes; Tell, OOC, your own messages and actions without speech do not trigger it.
+
+## Speech sounds
+
+Under **Incoming → Speech sounds**, enable **Play a quiet sound for speech** to play a short voice sound (about **220 ms**) for another player's public dialogue or an incoming Tell with speech, including dialogue inside emotes. **This works whether the speaker is visible or offscreen, and does not require the visual speech direction indicator.** OOC, your own speech (including outgoing Tell) and actions without dialogue do not trigger it. It requires **GTA World style chat**, but works with either native or alternative bubbles.
+
+Public speech uses left/right stereo direction relative to your camera and volume falling with distance from your character. **Incoming Tell plays centered, without distance attenuation**, so it works even when the sender is elsewhere or on another world; it does not trigger a directional screen glow. **Speech sound volume** defaults to **100%**, adjustable from **0 to 200%**. **Public speech sound range (yalms)** defaults to **30**, adjustable from **5 to 100**, independently of the visual indicator's range. FFXIV master/system sound volume and mute rules still apply. Each message gets one attempt when it arrives, and a global **1.5-second interval** shared by public speech and Tell prevents bursts of overlapping notifications. Sound is off by default and is never transmitted to other players. The sound asset is licensed for non-commercial use under **CC BY-NC-SA 3.0**; see its [attribution and license](Data/Audio/ATTRIBUTION.md).
+
+## Player nameplates by distance
+
+Under **Incoming → Player nameplates**, enable **Hide distant players' names and titles** and choose a distance from **5 to 100 yalms** (default: **20**). The distance is applied when you release the slider or finish editing its value. Other players' native overhead names, titles and FC tags are hidden beyond that distance and return when they come closer, according to your native display settings.
+
+This option is off by default. It leaves your own name, NPCs, enemies, HP bars and chat bubbles unchanged. It works independently of incoming chat styling. Disabling the option, pausing ReflavorRP or unloading the plugin restores the game's normal nameplate display without changing your saved game settings.
+
 ## Important words and name mentions
 
 Under **Incoming → Important words**, enable **Highlight my character's name** to highlight your first and last name independently. For a character named Legaia Lindblum, both `Legaia` and `Lindblum` are recognized, regardless of capitalization.

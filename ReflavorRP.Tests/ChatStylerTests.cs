@@ -16,7 +16,7 @@ public class ChatStylerTests : IDisposable
     private readonly Mock<IChatGui> chat = new();
     private readonly Mock<IObjectTable> objects = new();
     private readonly Mock<IPlayerCharacter> localPlayer = new();
-    private readonly Mock<Action<IChatMessage, ChatPieces, bool>> showChatBubble = new();
+    private readonly Mock<Action<StyledChatMessage>> presentMessage = new();
     private readonly Mock<Action> playHighlightSound = new();
     private readonly Configuration config = new() { HighlightCharacterName = false };
     private readonly ChatStyler styler;
@@ -34,7 +34,7 @@ public class ChatStylerTests : IDisposable
         objects.SetupGet(o => o.PlayerObjects).Returns(Array.Empty<IPlayerCharacter>());
         chat.Setup(c => c.Print(It.IsAny<XivChatEntry>())).Callback<XivChatEntry>(entry => printed = entry);
         styler = new ChatStyler(chat.Object, objects.Object, config, Mock.Of<IPluginLog>(),
-            showChatBubble.Object, playHighlightSound.Object);
+            presentMessage.Object, playHighlightSound.Object);
     }
 
     public void Dispose() => styler.Dispose();
@@ -69,7 +69,7 @@ public class ChatStylerTests : IDisposable
         Assert.Equal(XivChatType.Echo, printed.Type);
         Assert.Equal(42, printed.Timestamp);
         Assert.Equal(input, message.Object.Message.TextValue);
-        showChatBubble.Verify(show => show(message.Object, It.IsAny<ChatPieces>(), It.IsAny<bool>()), Times.Once);
+        presentMessage.Verify(show => show(It.Is<StyledChatMessage>(styled => styled.Source == message.Object)), Times.Once);
         message.Verify(m => m.PreventOriginal(), Times.Once);
         chat.Verify(c => c.Print(It.IsAny<XivChatEntry>()), Times.Once);
         output.WriteLine($"Entrada: {input}");
@@ -82,8 +82,8 @@ public class ChatStylerTests : IDisposable
         var events = new List<string>();
         chat.Setup(c => c.Print(It.IsAny<XivChatEntry>()))
             .Callback<XivChatEntry>(entry => events.Add("chat: " + entry.Message.TextValue));
-        showChatBubble.Setup(show => show(It.IsAny<IChatMessage>(), It.IsAny<ChatPieces>(), It.IsAny<bool>()))
-            .Callback<IChatMessage, ChatPieces, bool>((message, pieces, isOoc) => events.Add("bubble: " + message.Message.TextValue));
+        presentMessage.Setup(show => show(It.IsAny<StyledChatMessage>()))
+            .Callback<StyledChatMessage>(message => events.Add("bubble: " + message.Source.Message.TextValue));
 
         Receive(XivChatType.Say, "\"First.\"");
         Receive(XivChatType.Say, "\"Second.\"");
@@ -104,8 +104,8 @@ public class ChatStylerTests : IDisposable
     public void SharesOrderedSpeechAndActionSegmentsWithBubbles(XivChatType kind, string text)
     {
         ChatPieces? actual = null;
-        showChatBubble.Setup(show => show(It.IsAny<IChatMessage>(), It.IsAny<ChatPieces>(), false))
-            .Callback<IChatMessage, ChatPieces, bool>((message, pieces, isOoc) => actual = pieces.ToArray());
+        presentMessage.Setup(show => show(It.Is<StyledChatMessage>(message => !message.IsOoc)))
+            .Callback<StyledChatMessage>(message => actual = message.Pieces.ToArray());
 
         Receive(kind, text);
 
@@ -117,8 +117,8 @@ public class ChatStylerTests : IDisposable
     public void KeepsEmphasisAsSpeechBetweenNarrationSegments()
     {
         ChatPieces? actual = null;
-        showChatBubble.Setup(show => show(It.IsAny<IChatMessage>(), It.IsAny<ChatPieces>(), false))
-            .Callback<IChatMessage, ChatPieces, bool>((message, pieces, isOoc) => actual = pieces.ToArray());
+        presentMessage.Setup(show => show(It.Is<StyledChatMessage>(message => !message.IsOoc)))
+            .Callback<StyledChatMessage>(message => actual = message.Pieces.ToArray());
 
         Receive(XivChatType.CustomEmote, "smiles. \"I *really* mean it.\" nods.");
 
@@ -131,8 +131,74 @@ public class ChatStylerTests : IDisposable
     {
         Receive(XivChatType.Say, "(( brb ))");
 
-        showChatBubble.Verify(show => show(It.IsAny<IChatMessage>(),
-            It.Is<ChatPieces>(pieces => pieces.Count == 1 && !pieces[0].Speech && pieces[0].Text == "brb"), true), Times.Once);
+        presentMessage.Verify(show => show(It.Is<StyledChatMessage>(message => message.IsOoc && !message.HasSpeech &&
+            message.Pieces.Count == 1 && !message.Pieces[0].Speech && message.Pieces[0].Text == "brb")), Times.Once);
+    }
+
+    [Fact]
+    public void SharesTheResolvedAuthorAndSpeechClassificationWithPresentation()
+    {
+        StyledChatMessage? presented = null;
+        presentMessage.Setup(show => show(It.IsAny<StyledChatMessage>()))
+            .Callback<StyledChatMessage>(message => presented = message);
+
+        var source = Receive(XivChatType.Say, "\"Hello.\" waves.", (SeString)"Legaia");
+
+        Assert.NotNull(presented);
+        Assert.Same(source.Object, presented.Source);
+        Assert.Same(localPlayer.Object, presented.Speaker);
+        Assert.True(presented.IsOwn);
+        Assert.True(presented.HasSpeech);
+        Assert.False(presented.IsTell);
+        objects.VerifyGet(o => o.LocalPlayer, Times.Once);
+    }
+
+    [Fact]
+    public void ReceivedTellRemainsSpeechWithoutALoadedAuthor()
+    {
+        objects.SetupGet(o => o.LocalPlayer).Returns((IPlayerCharacter?)null);
+        StyledChatMessage? presented = null;
+        presentMessage.Setup(show => show(It.IsAny<StyledChatMessage>()))
+            .Callback<StyledChatMessage>(message => presented = message);
+
+        Receive(XivChatType.TellIncoming, "Hello.");
+
+        Assert.NotNull(presented);
+        Assert.Equal(XivChatType.TellIncoming, presented.Kind);
+        Assert.True(presented.IsTell);
+        Assert.True(presented.HasSpeech);
+        Assert.False(presented.IsOwn);
+        Assert.Null(presented.Speaker);
+    }
+
+    [Fact]
+    public void OutgoingTellUsesOurAuthorInsteadOfLookingUpTheContact()
+    {
+        StyledChatMessage? presented = null;
+        presentMessage.Setup(show => show(It.IsAny<StyledChatMessage>()))
+            .Callback<StyledChatMessage>(message => presented = message);
+
+        Receive(XivChatType.TellOutgoing, "Hello.");
+
+        Assert.NotNull(presented);
+        Assert.True(presented.IsOwn);
+        Assert.True(presented.IsTell);
+        Assert.Same(localPlayer.Object, presented.Speaker);
+        objects.VerifyGet(o => o.PlayerObjects, Times.Never);
+    }
+
+    [Fact]
+    public void ActionOnlyPresentationDoesNotBecomeSpeech()
+    {
+        StyledChatMessage? presented = null;
+        presentMessage.Setup(show => show(It.IsAny<StyledChatMessage>()))
+            .Callback<StyledChatMessage>(message => presented = message);
+
+        Receive(XivChatType.CustomEmote, "waves.");
+
+        Assert.NotNull(presented);
+        Assert.False(presented.HasSpeech);
+        Assert.False(presented.IsOoc);
     }
 
     [Fact]
@@ -349,7 +415,7 @@ public class ChatStylerTests : IDisposable
         var message = Receive(kind, "WTS item");
 
         Assert.Null(printed);
-        showChatBubble.Verify(show => show(It.IsAny<IChatMessage>(), It.IsAny<ChatPieces>(), It.IsAny<bool>()), Times.Never);
+        presentMessage.Verify(show => show(It.IsAny<StyledChatMessage>()), Times.Never);
         message.Verify(m => m.PreventOriginal(), Times.Never);
     }
 
@@ -361,7 +427,7 @@ public class ChatStylerTests : IDisposable
         var message = Receive(kind, "Hello!");
 
         Assert.Null(printed);
-        showChatBubble.Verify(show => show(It.IsAny<IChatMessage>(), It.IsAny<ChatPieces>(), It.IsAny<bool>()), Times.Never);
+        presentMessage.Verify(show => show(It.IsAny<StyledChatMessage>()), Times.Never);
         message.Verify(m => m.PreventOriginal(), Times.Never);
         objects.VerifyGet(o => o.LocalPlayer, Times.Never);
     }
@@ -387,7 +453,7 @@ public class ChatStylerTests : IDisposable
         Assert.Null(printed);
         Assert.Same(original, message.Object.Message);
         playHighlightSound.Verify(play => play(), Times.Never);
-        showChatBubble.Verify(show => show(It.IsAny<IChatMessage>(), It.IsAny<ChatPieces>(), It.IsAny<bool>()), Times.Never);
+        presentMessage.Verify(show => show(It.IsAny<StyledChatMessage>()), Times.Never);
         message.Verify(m => m.PreventOriginal(), Times.Never);
     }
 

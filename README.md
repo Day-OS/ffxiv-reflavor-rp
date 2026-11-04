@@ -70,3 +70,5 @@ To keep this hobby project manageable and avoid the headaches of handling suppor
 The project skeleton (project file, build setup, plugin entry point layout) started from goatcorp's [SamplePlugin](https://github.com/goatcorp/SamplePlugin) template. The chat conversion, chat styling and accent code is ReflavorRP's own.
 
 Licensed under the [Mozilla Public License 2.0](LICENSE.md).
+
+The optional speech cue uses Space Station 14's `speak_1.ogg`, by Goonstation and modified by Whisper, under **CC BY-NC-SA 3.0** (non-commercial use). The sound asset has a separate license from the plugin code; see [audio credits and license](Data/Audio/ATTRIBUTION.md).
