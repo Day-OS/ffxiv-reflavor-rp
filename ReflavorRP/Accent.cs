@@ -67,6 +67,12 @@ public class Accent
             Name = "Frontal lisp (Portuguese)",
             Rules =
             [
+                // a letter on its own is said by its name, spelling "S A D" is "esse A D" -> "'effe' A D",
+                // quoted to show it's a struggle to get out
+                new() { Pattern = @"(?<![\w'’])s\b", Replacement = "'effe'" },
+                new() { Pattern = @"(?<![\w'’])[zc]\b", Replacement = "'fê'" },
+                new() { Pattern = @"(?<![\w'’])ç(?!\w)", Replacement = "'fê-fedilha'" },
+                new() { Pattern = @"(?<![\w'’])x\b", Replacement = "'xif'" },
                 // Between vowels the sound of x depends on the word, so only known stems change;
                 // x said sh stays (taxa, lixo, luxo, mexer, trouxa, maxixe, Alexandre).
                 // x said s or z is an f. Runs first, so inexistente is not read as the "ne" of anexo.

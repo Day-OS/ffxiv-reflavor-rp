@@ -2,6 +2,7 @@
   <Project Path="ReflavorRP/ReflavorRP.csproj">
     <Platform Project="x64" />
   </Project>
+  <Project Path="ReflavorRP.AccentTool/ReflavorRP.AccentTool.csproj" />
   <Project Path="ReflavorRP.Tests/ReflavorRP.Tests.csproj">
     <Platform Project="x64" />
   </Project>

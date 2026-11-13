@@ -34,10 +34,17 @@ jobs:
     - name: Build
       run: dotnet build --configuration Release -p:Version=$($env:TAG.TrimStart('v'))
 
+    # One .exe with .NET inside, so it runs without installing anything
+    - name: Publish accent tool
+      run: >
+        dotnet publish ReflavorRP.AccentTool --configuration Release --runtime win-x64 --self-contained
+        -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true
+        -p:Version=$($env:TAG.TrimStart('v')) --output accent-tool
+
     - name: Create GitHub release
       env:
         GH_TOKEN: ${{ github.token }}
-      run: gh release create $env:TAG "$env:PACKAGE_DIR/latest.zip" --title $env:TAG --generate-notes
+      run: gh release create $env:TAG "$env:PACKAGE_DIR/latest.zip" "accent-tool/ReflavorAccents.exe" --title $env:TAG --generate-notes
 
     # repo.json is what people add under Custom Plugin Repositories
     - name: Update repo.json on master

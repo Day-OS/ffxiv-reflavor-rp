@@ -31,6 +31,14 @@ public class PortugueseFrontalLispTests
     [InlineData("táxi", "tákfi")]
     [InlineData("sexo", "fekfo")]
     [InlineData("tórax", "tórakf")]
+    // a letter on its own is said by its name
+    [InlineData("s", "'effe'")]
+    [InlineData("z", "'fê'")]
+    [InlineData("c", "'fê'")]
+    [InlineData("ç", "'fê-fedilha'")]
+    [InlineData("x", "'xif'")]
+    [InlineData("S A D", "'Effe' A D")]
+    [InlineData("C-A-S-A", "'Fê'-A-'Effe'-A")]
     // capitals are kept
     [InlineData("Sim", "Fim")]
     [InlineData("SIM", "FIM")]
