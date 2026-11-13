@@ -64,9 +64,15 @@ With the Say channel active, you can type `hello there` without `/say`. Bare tex
 
 ### Why did someone's message become OOC?
 
-Incoming Say without quotes or marked actions is treated as OOC. For example, a received Say body of `brb` becomes `(( Raih'li Tia: brb ))`.
+Under **Outgoing → OOC**, **Treat unquoted Say as OOC** controls incoming Say without quotes or action markers. It starts disabled, so plain text is read as IC speech. Enable it to show a received Say body of `brb` as `(( Raih'li Tia: brb ))`. Quoted dialogue is IC unless the channel is selected as always OOC.
 
 Your outgoing `/say brb` becomes quoted speech automatically. Use `/b brb` when you mean OOC. Plain incoming Tell is treated as speech; use `(( ... ))` for OOC there.
+
+**Always OOC channel** selects one optional OOC channel. All messages received in it are OOC, including quoted text. `/b` sends to that channel, even when written inside another route such as `/tell Name Surname /b ...`. For example, choosing Party makes `/b one moment` send `/party (( one moment ))`. **None** makes `/b` use Say, or the explicit route when written as `/party /b ...`. The selectable destinations are Say, Party, Alliance, FC and numbered linkshells.
+
+### Supported input notation
+
+The formatter accepts actions between brackets, braces or angle brackets, double asterisks, typographic quotes, dash dialogue and mixed IC/OOC. Under **Outgoing → RP notation (sent and received)**, choose whether brackets and single parentheses mark OOC. Brackets initially mark actions, and single parentheses initially mark OOC.
 
 ## 4. Shout or whisper as part of a scene
 
@@ -145,7 +151,7 @@ Put the channel first. The RP command formats the body while the channel prefix 
 
 Supported routes include Party (`/party`, `/p`), Tell (`/tell`, `/t`), Reply (`/reply`, `/r`), Free Company (`/freecompany`, `/fc`), Alliance (`/alliance`, `/a`), linkshells (`/linkshell`, `/l`) and cross-world linkshells (`/cwlinkshell`, `/cwl`), including numbered linkshells 1–8.
 
-These channels have no native custom-emote layout, so routed actions include your character's name in the message body. Incoming Party, FC, Alliance and linkshell messages keep their native appearance; they do not receive the public-chat styling shown above.
+These channels have no native custom-emote layout, so routed actions include your character's name in the message body. Incoming Party, Alliance, FC, linkshell and cross-world messages receive styling with a channel label, such as `[Linkshell 1]` or `[Cross-world linkshell 1]`. Speech, actions and OOC use the same content colors as public chat. A channel selected as **Always OOC channel** displays all its messages as OOC. Party also covers cross-world party messages. Group channels use chat-log presentation.
 
 **Selecting Party and then typing a bare `/me` does not route the emote to Party.** Use `/party /me ...` explicitly. A channel command without a body is left alone so you can still select channels normally.
 
@@ -234,8 +240,7 @@ Enable **Play a sound on highlights** in the same section to hear the game's `<s
 | `/me` played an animation | Enable **Replace the /me emote**. |
 | A whisper was visible to nearby players | `/low` and `/w` are local narration. Use `/tell` for private messages. |
 | Party or linkshell text was not converted | Include the channel prefix in the message, such as `/party /me waves`. |
-| A Say message became grey OOC | Incoming unquoted Say with no marked action is treated as OOC. Use quotes for dialogue. |
+| A Say message became grey OOC | Check **Treat unquoted Say as OOC** and **Always OOC channel** under **Outgoing → OOC**. |
 | A linked message was not restyled | Unsupported payloads keep their native appearance. |
-| A split post has speech and actions swapped | Unmatched straight quotes are ambiguous. Closing curly quotes (`”`) can identify a continuation that starts in speech. |
 
 For settings, installation and technical details, see the [README](README.md).

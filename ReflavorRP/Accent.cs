@@ -20,6 +20,8 @@ public class Accent
     public string Name { get; set; } = "";
     public List<AccentRule> Rules { get; set; } = [];
 
+    private const string Vowel = "[aeiouáéíóúâêôãõ]";
+
     public static readonly Accent[] Templates =
     [
         new()
@@ -57,6 +59,41 @@ public class Accent
                               ")",
                     Replacement = "th",
                 },
+            ],
+        },
+        new()
+        {
+            // Ceceio: Portuguese s, ss, ç, z, soft c and sc all become one "f".
+            Name = "Frontal lisp (Portuguese)",
+            Rules =
+            [
+                // Between vowels the sound of x depends on the word, so only known stems change;
+                // x said sh stays (taxa, lixo, luxo, mexer, trouxa, maxixe, Alexandre).
+                // x said s or z is an f. Runs first, so inexistente is not read as the "ne" of anexo.
+                new()
+                {
+                    Pattern = $@"(?<=\b(?:in|co|re)?[eê])x(?={Vowel}|h)" + // exame, êxito, inexistente, coexistir
+                              @"|(?<=\bm[aá]|pr[oó])x(?=im)" +            // máximo, próximo, aproximar
+                              @"|(?<=au)x(?=[ií])|(?<=trou|sinta)x(?=e)" + // auxílio, trouxe (not trouxa), sintaxe
+                              @"|xc(?=[eiéíê])|xs" +                       // excelente, exsudação: one s sound
+                              $"|(?<={Vowel})x(?=[bcdfgjklmnpqrtvwz])",     // texto, extra, exfoliar
+                    Replacement = "f",
+                },
+                // x said ks keeps the k: táxi -> tákfi, tórax -> tórakf
+                new()
+                {
+                    Pattern = $@"(?<={Vowel})x\b" +                                // tórax, fênix, látex, Rex
+                              @"|(?<=t[aá])x(?=[ií]|on)" +                         // táxi, taxímetro, taxonomia (not taxa)
+                              @"|(?<=[oó])x(?=id)" +                               // óxido, dióxido, monóxido
+                              @"|(?<=\b(?:par)?[oó]|\ba|ore|l[eé])x(?=[ií])" +     // oxigênio, paroxítona, axila, anorexia, léxico
+                              @"|(?<=\bma)x(?=il)|(?<=\bpr[aá])x(?=is)" +          // maxilar (not maxixe), práxis (not praxe)
+                              @"|(?<=\bbo)x(?=e)|(?<=\bsa|nve)x(?=o)" +            // boxe, saxofone, convexo
+                              $"|(?<=fi|se|t[oó]|ne|ple|fle|flu|do)x(?={Vowel})", // fixo, sexo, tóxico, anexo, complexo, reflexo, fluxo, paradoxo
+                    Replacement = "kf",
+                },
+                // sim, passo, casa, coração, cedo, nascer, desça, fazer, mais
+                // (ch, nh, lh and English sh keep their own sound)
+                new() { Pattern = "(?>(?:[szç]|c(?=[eiéíê]))+)(?!h)", Replacement = "f" },
             ],
         },
         new()
