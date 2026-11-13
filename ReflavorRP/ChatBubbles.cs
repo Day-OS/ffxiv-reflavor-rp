@@ -5,7 +5,6 @@ using System.Linq;
 using System.Numerics;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Game.ClientState.Objects.SubKinds;
-using Dalamud.Game.Text;
 using Dalamud.Interface.Utility;
 using Dalamud.Plugin.Services;
 using SceneCameraManager = FFXIVClientStructs.FFXIV.Client.Graphics.Scene.CameraManager;
@@ -14,7 +13,7 @@ namespace ReflavorRP;
 
 public sealed class ChatBubbles(IObjectTable objects, IGameGui gameGui, Configuration config)
 {
-    internal sealed record Bubble(long Id, string Name, uint World, string Text, XivChatType Kind,
+    internal sealed record Bubble(long Id, string Name, uint World, string Text,
         long DurationMilliseconds, long ExpiresAt = 0, bool Speech = true, bool Ooc = false,
         long LastUpdatedAt = 0, bool WasVisible = true, bool WasHovered = false);
 
@@ -27,7 +26,6 @@ public sealed class ChatBubbles(IObjectTable objects, IGameGui gameGui, Configur
     {
         var speaker = message.Speaker;
         var pieces = message.Pieces;
-        var isOoc = message.IsOoc;
         if (speaker == null || pieces.Count == 0)
             return;
 
@@ -42,8 +40,11 @@ public sealed class ChatBubbles(IObjectTable objects, IGameGui gameGui, Configur
         }
         if (messages.Count > 0 && (messages[^1].Name != name || messages[^1].World != world))
             messages.Clear();
-        foreach (var (speech, content) in pieces)
+        foreach (var segment in pieces)
         {
+            var speech = segment.Speech;
+            var content = segment.Text;
+            var isOoc = segment.Kind == RpTextKind.Ooc;
             if (string.IsNullOrWhiteSpace(content))
                 continue;
             var text = content;
@@ -51,12 +52,12 @@ public sealed class ChatBubbles(IObjectTable objects, IGameGui gameGui, Configur
                 text = "(( " + content + " ))";
             else if (!speech)
             {
-                if (message.Kind == XivChatType.CustomEmote)
+                if (RpChannels.IsEmote(message.Kind))
                     text = name + " " + text;
                 text = "* " + text;
             }
             var duration = GetDurationMilliseconds(text, config.ChatBubbleReadingSpeed);
-            messages.Add(new Bubble(nextBubbleId++, name, world, text, message.Kind,
+            messages.Add(new Bubble(nextBubbleId++, name, world, text,
                 duration, Speech: speech, Ooc: isOoc));
         }
         AdvanceQueue(messages, now);
@@ -166,8 +167,7 @@ public sealed class ChatBubbles(IObjectTable objects, IGameGui gameGui, Configur
                 border = new Vector4(0.58f, 0.58f, 0.62f, 0.55f);
                 textColor = new Vector4(0.32f, 0.32f, 0.36f, 1f);
             }
-            var isTell = bubble.Kind is XivChatType.TellIncoming or XivChatType.TellOutgoing;
-            var heading = isTell ? "[Tell] " + bubble.Name : bubble.Name;
+            var heading = bubble.Name;
             const float headingScale = 0.8f;
             var headingSize = ImGui.CalcTextSize(heading) * headingScale;
             var queueLabel = item.HiddenCount > 0 ? item.HiddenCount.ToString(CultureInfo.InvariantCulture) : "";
@@ -293,8 +293,6 @@ public sealed class ChatBubbles(IObjectTable objects, IGameGui gameGui, Configur
                 var labelWidth = Math.Min(headingSize.X + 6 * scale, size.X);
                 var labelBottom = labelTop + new Vector2(labelWidth, labelHeight);
                 var headingColor = new Vector4(textColor.X, textColor.Y, textColor.Z, 0.85f * opacity);
-                if (isTell)
-                    headingColor = new Vector4(0.58f, 0.3f, 0.02f, 0.9f * opacity);
                 draw.AddRectFilled(labelTop, labelBottom, backgroundColor, 3 * scale);
                 draw.AddRect(labelTop, labelBottom, decoration, 3 * scale);
                 draw.PushClipRect(labelTop, labelBottom, true);

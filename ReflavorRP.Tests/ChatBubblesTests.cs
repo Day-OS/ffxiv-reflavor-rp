@@ -1,4 +1,3 @@
-using Dalamud.Game.Text;
 using System.Numerics;
 
 namespace ReflavorRP.Tests;
@@ -77,8 +76,8 @@ public class ChatBubblesTests
     {
         var messages = new List<ChatBubbles.Bubble>
         {
-            new(1, "Legaia", 75, "First", XivChatType.Say, 3000),
-            new(2, "Legaia", 75, "Second", XivChatType.Say, 6000),
+            new(1, "Legaia", 75, "First", 3000),
+            new(2, "Legaia", 75, "Second", 6000),
         };
 
         ChatBubbles.AdvanceQueue(messages, 1000);
@@ -102,8 +101,8 @@ public class ChatBubblesTests
     {
         var messages = new List<ChatBubbles.Bubble>
         {
-            new(1, "Legaia", 75, "First", XivChatType.CustomEmote, 5000),
-            new(2, "Legaia", 75, "Second", XivChatType.Say, 5000),
+            new(1, "Legaia", 75, "First", 5000),
+            new(2, "Legaia", 75, "Second", 5000),
         };
         ChatBubbles.AdvanceQueue(messages, 1000);
         messages[0] = messages[0] with { WasVisible = false };
@@ -125,9 +124,9 @@ public class ChatBubblesTests
     {
         var messages = new List<ChatBubbles.Bubble>
         {
-            new(1, "Legaia", 75, "First", XivChatType.Say, 3000, 4000),
-            new(2, "Legaia", 75, "Second", XivChatType.Say, 3000),
-            new(3, "Legaia", 75, "Third", XivChatType.Say, 3000),
+            new(1, "Legaia", 75, "First", 3000, 4000),
+            new(2, "Legaia", 75, "Second", 3000),
+            new(3, "Legaia", 75, "Third", 3000),
         };
 
         ChatBubbles.AdvanceQueue(messages, 20000);
@@ -142,8 +141,8 @@ public class ChatBubblesTests
     {
         var messages = new List<ChatBubbles.Bubble>
         {
-            new(1, "Legaia", 75, "First", XivChatType.Say, 5000),
-            new(2, "Legaia", 75, "Second", XivChatType.Say, 6000),
+            new(1, "Legaia", 75, "First", 5000),
+            new(2, "Legaia", 75, "Second", 6000),
         };
         ChatBubbles.AdvanceQueue(messages, 1000);
         ChatBubbles.AdvanceQueue(messages, 2000);

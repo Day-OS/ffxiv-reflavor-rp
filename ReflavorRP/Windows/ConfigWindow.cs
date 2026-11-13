@@ -1,5 +1,6 @@
-﻿using System;
+using System;
 using System.Numerics;
+using System.Linq;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility;
 using Dalamud.Interface.Windowing;
@@ -134,6 +135,25 @@ public class ConfigWindow : Window
         DrawCheckbox("Replace /s with RP shout", config.ReplaceSCommand, v => config.ReplaceSCommand = v,
                      "When on, /s narrates a shout through /em. When off, /s is left untouched as the game's Say shorthand.");
 
+        Section("RP notation (sent and received)");
+        DrawCheckbox("Use brackets for OOC", config.BracketsAreOoc, v => config.BracketsAreOoc = v,
+                     "Brackets mark actions. Enable this option when your group uses brackets for OOC.");
+        DrawCheckbox("Use single parentheses for OOC", config.ParenthesesAreOoc, v => config.ParenthesesAreOoc = v,
+                     "Interprets (text) as OOC. Double parentheses always mark OOC.");
+
+        Section("OOC");
+        DrawCheckbox("Treat unquoted Say as OOC", config.UnquotedSayIsOoc, v => config.UnquotedSayIsOoc = v,
+                     "Reads incoming Say without quotes or action markers as OOC. Turn off to read it as IC speech.");
+        var channels = RpChannels.Entries.Where(entry => RpChannels.CanBeOocChannel(entry.Kind)).ToArray();
+        var selected = Array.FindIndex(channels, entry => entry.Kind == config.AlwaysOocChannel) + 1;
+        var labels = "None\0" + string.Join("\0", channels.Select(entry => entry.Label)) + "\0";
+        if (ImGui.Combo("Always OOC channel", ref selected, labels))
+        {
+            config.AlwaysOocChannel = selected == 0 ? null : channels[selected - 1].Kind;
+            config.Save();
+        }
+        ImGui.TextWrapped("All messages in the selected channel are OOC. /b sends to that channel, including /b inside another channel command.");
+
         Section("Verbs");
         DrawTextInput("/s", config.VerbShout, v => config.VerbShout = v,
                       "/s help -> shouts, \"Help!\"");
@@ -147,7 +167,7 @@ public class ConfigWindow : Window
     {
         Section("What you see");
         DrawCheckbox("GTA World style chat", config.StyleIncomingChat, v => config.StyleIncomingChat = v,
-                     "Restyles Say, Emote, Shout, Yell and incoming/outgoing Tell. Only changes what you see, nothing is sent.");
+                     "Restyles public RP chat, Tell, Party, Alliance, FC and linkshells, including cross-world channels.");
         ImGui.TextColored(ErrorColor, "Incompatible with other chat plugins.");
         ImGui.TextWrapped("Always replaces styled messages with local Echo lines. Chat 2, ChatProximity and other chat plugins are unsupported; there is no compatibility mode.");
         DrawCheckbox("Darker text for distant players", config.FadeByDistance, v => config.FadeByDistance = v,

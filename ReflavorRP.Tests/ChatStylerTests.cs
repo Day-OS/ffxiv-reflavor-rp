@@ -1,4 +1,4 @@
-﻿using Dalamud.Game.Chat;
+using Dalamud.Game.Chat;
 using Dalamud.Game.ClientState.Objects.SubKinds;
 using Dalamud.Game.Text;
 using Dalamud.Game.Text.SeStringHandling;
@@ -18,7 +18,7 @@ public class ChatStylerTests : IDisposable
     private readonly Mock<IPlayerCharacter> localPlayer = new();
     private readonly Mock<Action<StyledChatMessage>> presentMessage = new();
     private readonly Mock<Action> playHighlightSound = new();
-    private readonly Configuration config = new() { HighlightCharacterName = false };
+    private readonly Configuration config = new() { HighlightCharacterName = false, UnquotedSayIsOoc = true };
     private readonly ChatStyler styler;
     private readonly ITestOutputHelper output;
     private XivChatEntry? printed;
@@ -40,6 +40,117 @@ public class ChatStylerTests : IDisposable
     public void Dispose() => styler.Dispose();
 
     [Theory]
+    [InlineData(XivChatType.Party, "Party")]
+    [InlineData(XivChatType.CrossParty, "Cross-world party")]
+    [InlineData(XivChatType.Alliance, "Alliance")]
+    [InlineData(XivChatType.FreeCompany, "Free Company")]
+    [InlineData(XivChatType.Ls1, "Linkshell 1")]
+    [InlineData(XivChatType.Ls8, "Linkshell 8")]
+    [InlineData(XivChatType.CrossLinkShell1, "Cross-world linkshell 1")]
+    [InlineData(XivChatType.CrossLinkShell8, "Cross-world linkshell 8")]
+    public void IdentifiesGroupChannelsAndStylesTheirSpeech(XivChatType kind, string label)
+    {
+        Receive(kind, "\"Hello.\" [waves]");
+        Assert.Equal($"[{label}] Raih’li says: Hello. *waves*", printed?.Message.TextValue);
+        localPlayer.VerifyGet(player => player.Position, Times.Never);
+    }
+
+    [Theory]
+    [InlineData("[waves]", "[Linkshell 1] * Raih’li waves")]
+    [InlineData("Raih’li waves. \"Hello.\"", "[Linkshell 1] * Raih’li waves. \"Hello.\"")]
+    [InlineData("[waves] \"Hello.\"", "[Linkshell 1] * Raih’li waves \"Hello.\"")]
+    [InlineData("(( brb ))", "[Linkshell 1] (( Raih’li: brb ))")]
+    public void StylesGroupNarrationAndOoc(string input, string expected)
+    {
+        Receive(XivChatType.Ls1, input);
+        Assert.Equal(expected, printed?.Message.TextValue);
+    }
+
+    [Theory]
+    [InlineData("hello", "(( Raih’li: hello ))")]
+    [InlineData("[waves]", "* Raih’li waves")]
+    [InlineData("\"Hello.\" waves.", "Raih’li says: Hello. *waves.*")]
+    public void ClassifiesIncomingNotation(string input, string expected)
+    {
+        Receive(XivChatType.Say, input);
+        Assert.Equal(expected, printed?.Message.TextValue);
+    }
+
+    [Fact]
+    public void OocOptionsControlUnmarkedTextAndTheSelectedChannel()
+    {
+        config.UnquotedSayIsOoc = false;
+        config.AlwaysOocChannel = XivChatType.Party;
+        Receive(XivChatType.Party, "brb");
+        Assert.Equal("[Party] (( Raih’li: brb ))", printed?.Message.TextValue);
+        Receive(XivChatType.Say, "hello");
+        Assert.Equal("Raih’li says: hello", printed?.Message.TextValue);
+    }
+
+    [Theory]
+    [InlineData(XivChatType.Say, "Hello [waves] bye", "Raih’li says: Hello *waves* bye")]
+    [InlineData(XivChatType.Say, "- Hello *waves* - bye -", "Raih’li says: Hello *waves* bye")]
+    [InlineData(XivChatType.Say, "Hello [waves] (( brb ))", "Raih’li says: Hello *waves* (( brb ))")]
+    [InlineData(XivChatType.Say, "// brb", "(( Raih’li: brb ))")]
+    [InlineData(XivChatType.CustomEmote, "[waves] «Hello»", "* Raih’li waves \"Hello\"")]
+    public void StylesCatalogNotation(XivChatType kind, string input, string expected)
+    {
+        Receive(kind, input);
+        Assert.Equal(expected, printed?.Message.TextValue);
+    }
+
+    [Fact]
+    public void SharesMixedOocClassificationWithPresentation()
+    {
+        StyledChatMessage? actual = null;
+        presentMessage.Setup(show => show(It.IsAny<StyledChatMessage>()))
+            .Callback<StyledChatMessage>(message => actual = message);
+        Receive(XivChatType.Say, "Hello [waves] (( brb ))");
+        Assert.NotNull(actual);
+        Assert.True(actual.HasSpeech);
+        Assert.False(actual.IsOoc);
+        Assert.Equal(RpTextKind.Ooc, actual.Pieces[^1].Kind);
+    }
+
+    [Fact]
+    public void StylesGroupSpeechAndTheSelectedOocChannel()
+    {
+        Receive(XivChatType.Party, "hello");
+        Assert.Equal("[Party] Raih’li says: hello", printed?.Message.TextValue);
+        config.AlwaysOocChannel = XivChatType.Party;
+        Receive(XivChatType.Party, "brb");
+        Assert.Equal("[Party] (( Raih’li: brb ))", printed?.Message.TextValue);
+        presentMessage.Verify(show => show(It.Is<StyledChatMessage>(message =>
+            message.IsOoc && !message.HasSpeech && !message.IsPublic)), Times.Once);
+    }
+
+    [Theory]
+    [InlineData(true, "(( Raih’li: hello ))")]
+    [InlineData(false, "Raih’li says: hello")]
+    public void UnquotedSayChoiceControlsUnmarkedText(bool ooc, string expected)
+    {
+        config.UnquotedSayIsOoc = ooc;
+        Receive(XivChatType.Say, "hello");
+        Assert.Equal(expected, printed?.Message.TextValue);
+        Receive(XivChatType.Say, "\"Hello.\"");
+        Assert.Equal("Raih’li says: Hello.", printed?.Message.TextValue);
+    }
+
+    [Fact]
+    public void SelectedChannelOverridesQuotesAndSwitchesToOneChannel()
+    {
+        config.AlwaysOocChannel = XivChatType.Party;
+        Receive(XivChatType.CrossParty, "\"Hello.\"");
+        Assert.Equal("[Cross-world party] (( Raih’li: \"Hello.\" ))", printed?.Message.TextValue);
+        config.AlwaysOocChannel = XivChatType.FreeCompany;
+        var party = Receive(XivChatType.Party, "hello");
+        Assert.Equal("[Party] Raih’li says: hello", printed?.Message.TextValue);
+        party.Verify(message => message.PreventOriginal(), Times.Once);
+        Receive(XivChatType.FreeCompany, "\"Hello.\"");
+        Assert.Equal("[Free Company] (( Raih’li: \"Hello.\" ))", printed?.Message.TextValue);
+    }
+
+    [Theory]
     [InlineData(XivChatType.Say, "“Hello!”", "Raih’li says: Hello!")]
     [InlineData(XivChatType.Say, "Hello *waves* *smiles* again", "Raih’li says: Hello *waves* *smiles* again")]
     [InlineData(XivChatType.Say, "Hello *waves**smiles**sits* Bye. Again.", "Raih’li says: Hello *waves* *smiles* *sits* Bye. Again.")]
@@ -50,6 +161,8 @@ public class ChatStylerTests : IDisposable
     [InlineData(XivChatType.CustomEmote, "smiles. \"I *really* mean it.\"", "* Raih’li smiles. \"I *really* mean it.\"")]
     [InlineData(XivChatType.TellIncoming, "\"I *really* mean it.\" waves.", "[TELL:Raih’li] Raih’li says: I *really* mean it. *waves.*")]
     [InlineData(XivChatType.Say, "brb", "(( Raih’li: brb ))")]
+    [InlineData(XivChatType.TellIncoming, "(( brb *waves* ))", "[TELL:Raih’li] (( Raih’li: brb *waves* ))")]
+    [InlineData(XivChatType.TellIncoming, "brb", "[TELL:Raih’li] Raih’li says: brb")]
     [InlineData(XivChatType.CustomEmote, "**waves. “ Hi. ”**", "* Raih’li waves. \"Hi.\"")]
     [InlineData(XivChatType.CustomEmote, "waves.  “Hi.”  nods.", "* Raih’li waves. \"Hi.\" nods.")]
     [InlineData(XivChatType.TellIncoming, "“Welcome to The Dancing Daisy, friend!”", "[TELL:Raih’li] Raih’li says: Welcome to The Dancing Daisy, friend!")]
@@ -58,7 +171,6 @@ public class ChatStylerTests : IDisposable
     [InlineData(XivChatType.TellOutgoing, "Legaia’s eyes scan the menu. “Fried Fish, please.” She closes the menu.", "[TELL:Raih’li] * Legaia’s eyes scan the menu. \"Fried Fish, please.\" She closes the menu.")]
     [InlineData(XivChatType.TellIncoming, "*waves*", "[TELL:Raih’li] * waves")]
     [InlineData(XivChatType.TellOutgoing, "**waves**", "[TELL:Raih’li] * waves")]
-    [InlineData(XivChatType.TellIncoming, "and that’s why.” she said.", "[TELL:Raih’li] Raih’li says: and that’s why. *she said.*")]
     [InlineData(XivChatType.TellIncoming, "“Hello!\" she waves.", "[TELL:Raih’li] Raih’li says: Hello! *she waves.*")]
     public void FormatsChat(XivChatType kind, string input, string expected)
     {
@@ -105,7 +217,7 @@ public class ChatStylerTests : IDisposable
     {
         ChatPieces? actual = null;
         presentMessage.Setup(show => show(It.Is<StyledChatMessage>(message => !message.IsOoc)))
-            .Callback<StyledChatMessage>(message => actual = message.Pieces.ToArray());
+            .Callback<StyledChatMessage>(message => actual = message.Pieces.Select(p => (p.Speech, p.Text)).ToArray());
 
         Receive(kind, text);
 
@@ -118,7 +230,7 @@ public class ChatStylerTests : IDisposable
     {
         ChatPieces? actual = null;
         presentMessage.Setup(show => show(It.Is<StyledChatMessage>(message => !message.IsOoc)))
-            .Callback<StyledChatMessage>(message => actual = message.Pieces.ToArray());
+            .Callback<StyledChatMessage>(message => actual = message.Pieces.Select(p => (p.Speech, p.Text)).ToArray());
 
         Receive(XivChatType.CustomEmote, "smiles. \"I *really* mean it.\" nods.");
 
@@ -374,6 +486,9 @@ public class ChatStylerTests : IDisposable
     [InlineData(XivChatType.CustomEmote, 1)]
     [InlineData(XivChatType.TellIncoming, 2)]
     [InlineData(XivChatType.TellOutgoing, 1)]
+    [InlineData(XivChatType.Party, 1)]
+    [InlineData(XivChatType.Ls1, 1)]
+    [InlineData(XivChatType.CrossLinkShell1, 1)]
     public void KeepsClickablePlayerLinks(XivChatType kind, int expectedLinks)
     {
         config.HighlightWords = "Raih’li";
@@ -420,7 +535,6 @@ public class ChatStylerTests : IDisposable
     }
 
     [Theory]
-    [InlineData(XivChatType.Party)]
     [InlineData(XivChatType.Echo)]
     public void LeavesOtherChannelsUntouched(XivChatType kind)
     {

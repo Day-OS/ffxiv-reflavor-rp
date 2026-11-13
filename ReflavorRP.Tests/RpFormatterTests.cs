@@ -3,6 +3,89 @@ namespace ReflavorRP.Tests;
 public class RpFormatterTests
 {
     [Theory]
+    [InlineData("/b brb")]
+    [InlineData("/party /b brb")]
+    [InlineData("/tell First Last@World /b brb")]
+    [InlineData("/reply /b brb")]
+    public void SendsBToTheSelectedOocChannel(string input)
+    {
+        var config = new Configuration { AlwaysOocChannel = Dalamud.Game.Text.XivChatType.FreeCompany,
+            ActiveAccents = ["Uwufication"] };
+        Assert.Equal("/freecompany (( brb ))", RpFormatter.Rewrite(input, 1, config));
+    }
+
+    [Fact]
+    public void ReplacesAndClearsTheOocDestination()
+    {
+        var config = new Configuration { AlwaysOocChannel = Dalamud.Game.Text.XivChatType.Party };
+        Assert.Equal("/party (( brb ))", RpFormatter.Rewrite("/b brb", 1, config));
+        config.AlwaysOocChannel = Dalamud.Game.Text.XivChatType.CrossLinkShell8;
+        Assert.Equal("/cwlinkshell8 (( brb ))", RpFormatter.Rewrite("/b brb", 1, config));
+        config.AlwaysOocChannel = null;
+        Assert.Equal("/say (( brb ))", RpFormatter.Rewrite("/b brb", 1, config));
+        Assert.Equal("/party (( brb ))", RpFormatter.Rewrite("/party /b brb", 1, config));
+    }
+
+    [Theory]
+    [InlineData(Dalamud.Game.Text.XivChatType.TellOutgoing)]
+    [InlineData(Dalamud.Game.Text.XivChatType.CustomEmote)]
+    [InlineData(Dalamud.Game.Text.XivChatType.Echo)]
+    public void RejectsOocDestinationsWithoutAStandaloneChatRoute(Dalamud.Game.Text.XivChatType channel)
+    {
+        var config = new Configuration { AlwaysOocChannel = channel };
+        Assert.Null(config.AlwaysOocChannel);
+        Assert.Equal("/say (( brb ))", RpFormatter.Rewrite("/b brb", 1, config));
+    }
+
+    [Fact]
+    public void KeepsExplicitCommandsInTheOocChannelOutOfCharacter()
+    {
+        var config = new Configuration { AlwaysOocChannel = Dalamud.Game.Text.XivChatType.Party,
+            ActiveAccents = ["Uwufication"] };
+        Assert.Equal("/party (( rolls ))", RpFormatter.Rewrite("/party /me rolls", 1, config, "Test Player"));
+        Assert.Equal("/em rolls.", RpFormatter.Rewrite("/me rolls", 1, config, "Test Player"));
+    }
+
+    [Theory]
+    [InlineData("/say hello [waves]", "/say \"Hello.\" waves.")]
+    [InlineData("/me smiles \"hello\"", "/em smiles. \"Hello.\"")]
+    [InlineData("/say hello *waves*", "/say \"Hello.\" waves.")]
+    [InlineData("/say *waves* *smiles*", "/em waves. smiles.")]
+    [InlineData("/me smiles   \"hello\"  nods", "/em smiles. \"Hello.\" nods.")]
+    [InlineData("/me smiles \"\"", "/em smiles.")]
+    [InlineData("/me \"hello\" \"bye\"", "/em \"Hello.\" \"Bye.\"")]
+    public void FormatsSupportedNotation(string input, string expected)
+    {
+        var config = new Configuration();
+        Assert.Equal(expected, RpFormatter.Rewrite(input, 1, config, "Test Player"));
+    }
+
+    [Theory]
+    [InlineData("/say hello [waves] bye", "/say \"Hello.\" waves. \"Bye.\"")]
+    [InlineData("/say hello [waves] \"bye\"", "/say \"Hello.\" waves. \"Bye.\"")]
+    [InlineData("/do a letter lies on the table", "/em a letter lies on the table.")]
+    [InlineData("/emote [waves]", "/em waves.")]
+    [InlineData("/say hello **waves** bye", "/say \"Hello.\" waves. \"Bye.\"")]
+    [InlineData("/say [waves]", "/em waves.")]
+    [InlineData("/say **waves**", "/em waves.")]
+    [InlineData("/say - hello *waves* - bye -", "/say \"Hello.\" waves. \"Bye.\"")]
+    [InlineData("/say — hello — she waves — bye", "/say \"Hello.\" she waves. \"Bye.\"")]
+    [InlineData("/say “hello” waves. «bye»", "/say \"Hello.\" waves. \"Bye.\"")]
+    [InlineData("/em [waves] “hello”", "/em waves. \"Hello.\"")]
+    [InlineData("/say hello [waves] (( brb ))", "/say \"Hello.\" waves. (( brb ))")]
+    [InlineData("/say hello // brb", "/say \"Hello.\" (( brb ))")]
+    [InlineData("/say (( brb ))", "/say (( brb ))")]
+    [InlineData("/say OOC: brb", "/say (( brb ))")]
+    [InlineData("/say Antes ul'dahn do que um viera [mostra o dedo do meio.]", "/say \"Antes ul'dahn do que um viera.\" mostra o dedo do meio.")]
+    [InlineData("/em mostra o dedo do meio. \"Antes um ul'dahn do que um viera.\"", "/em mostra o dedo do meio. \"Antes um ul'dahn do que um viera.\"")]
+    public void ConvertsCatalogInputsToCanonicalFormat(string input, string expected)
+    {
+        var config = new Configuration();
+        Assert.Equal(expected, RpFormatter.Rewrite(input, 1, config, "Test Player"));
+        Assert.Equal(expected, RpFormatter.Rewrite(expected, 1, config, "Test Player"));
+    }
+
+    [Theory]
     [InlineData("/me waves", "/em waves.")]
     [InlineData("/em waves", "/em waves.")]
     [InlineData("/ame waves", "/em waves.")]

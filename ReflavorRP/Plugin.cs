@@ -137,9 +137,11 @@ public sealed unsafe class Plugin : IDalamudPlugin
 
     private void PresentMessage(StyledChatMessage message)
     {
+        if (!RpChannels.IsPublicOrTell(message.Kind))
+            return;
         if (message.HasSpeech && !message.IsOwn)
         {
-            if (message.Kind == XivChatType.TellIncoming)
+            if (RpChannels.IsIncomingTell(message.Kind))
             {
                 speechSounds.AddTell();
             }
@@ -162,7 +164,7 @@ public sealed unsafe class Plugin : IDalamudPlugin
         var source = message.Source;
         var player = source.Sender.Payloads.OfType<PlayerPayload>().FirstOrDefault();
         // Outgoing Tell identifies its recipient; unlinked public senders are ourselves.
-        var isLocalPlayer = message.Kind == XivChatType.TellOutgoing || player == null;
+        var isLocalPlayer = RpChannels.IsOutgoingTell(message.Kind) || player == null;
         var senderName = isLocalPlayer ? ObjectTable.LocalPlayer?.Name.TextValue : player!.PlayerName;
         if (string.IsNullOrWhiteSpace(senderName))
             return;

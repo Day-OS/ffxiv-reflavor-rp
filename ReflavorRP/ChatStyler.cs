@@ -18,17 +18,12 @@ namespace ReflavorRP;
 // GTA World look for chat we receive. Only changes what we see, nothing gets sent.
 public sealed class ChatStyler : IDisposable
 {
-    private static readonly char[] QuoteChars = ['"', '“', '”', '„', '‟', '″', '\uff02', '«', '»'];
-    private static readonly Regex OocRegex = new(@"^\(\((.*)\)\)$", RegexOptions.Compiled);
-    private static readonly Regex ActionRegex = new(@"(?<markers>\*+)(?<action>[^*]+)\k<markers>", RegexOptions.Compiled);
-
     private static readonly byte[] EmoteColor = [0xC2, 0xA2, 0xDA];
     private static readonly byte[] SpeechColor = [0xE6, 0xE6, 0xE6];
     private static readonly byte[] OocColor = [0xAF, 0xAF, 0xAF];
     private static readonly byte[] PrefixColor = [0xFF, 0xA6, 0x4D];
     private static readonly byte[] HighlightColor = [0xFF, 0xD1, 0x66];
 
-    private enum LineStyle { Speech, Emote, Shout, Ooc }
 
     private readonly IChatGui chatGui;
     private readonly IObjectTable objectTable;
@@ -59,8 +54,7 @@ public sealed class ChatStyler : IDisposable
         if (!config.Enabled || !config.StyleIncomingChat || msg.IsHandled)
             return;
 
-        if (msg.LogKind is not (XivChatType.Say or XivChatType.CustomEmote or XivChatType.Shout
-            or XivChatType.Yell or XivChatType.TellIncoming or XivChatType.TellOutgoing))
+        if (!RpChannels.ShouldStyle(msg.LogKind))
             return;
 
         // we rebuild from plain text, so skip anything with item links, auto-translate etc.
@@ -75,92 +69,49 @@ public sealed class ChatStyler : IDisposable
         if (text == "")
             return;
 
-        var isTell = msg.LogKind is XivChatType.TellIncoming or XivChatType.TellOutgoing;
-        var isShout = msg.LogKind is XivChatType.Shout or XivChatType.Yell;
+        var isTell = RpChannels.IsTell(msg.LogKind);
+        var isShout = RpChannels.IsShout(msg.LogKind);
         var localPlayer = objectTable.LocalPlayer;
         // Resolve the author once for chat styling, bubbles, visual cues and speech sound.
-        var speaker = msg.LogKind == XivChatType.TellOutgoing ? localPlayer : FindSpeaker(msg.Sender, localPlayer);
+        var speaker = RpChannels.IsOutgoingTell(msg.LogKind) ? localPlayer : FindSpeaker(msg.Sender, localPlayer);
 
         // Only restyle RP shouts; their brightness does not depend on distance.
         if (isShout && !IsRoleplaying(speaker))
             return;
 
-        var fade = !isTell && !isShout && config.FadeByDistance ? DistanceFade(speaker, localPlayer) : 1f;
+        var fade = RpChannels.IsPublic(msg.LogKind) && !isShout && config.FadeByDistance
+            ? DistanceFade(speaker, localPlayer) : 1f;
 
         var senderName = WithoutWorld(msg.Sender);
         var authorName = senderName;
         var localName = localPlayer?.Name.TextValue;
-        if (msg.LogKind == XivChatType.TellOutgoing)
+        if (RpChannels.IsOutgoingTell(msg.LogKind))
         {
             authorName = string.IsNullOrWhiteSpace(localName) ? "Your character" : localName;
         }
         var prefix = new LuminaSeStringBuilder();
         if (isTell)
             prefix.Append("[TELL:").Append(new ReadOnlySeString(senderName.Encode())).Append("] ");
+        else if (!RpChannels.IsPublic(msg.LogKind))
+            prefix.Append("[").Append(RpChannels.Label(msg.LogKind)).Append("] ");
 
-        var ooc = OocRegex.Match(text);
-        var pieces = new List<(bool Speech, string Text)>();
-        var quotedParts = text.Split(QuoteChars);
-        var hasQuotes = quotedParts.Length > 1;
-        var actions = ActionRegex.Matches(text);
-        var startsWithNarration = isTell && (text.StartsWith('*') || StartsWithActor(text, authorName.TextValue));
-
-        if (hasQuotes)
-        {
-            var quoteCount = quotedParts.Length - 1;
-            var firstQuote = text[text.IndexOfAny(QuoteChars)];
-            // An unmatched closing curly quote means the post starts mid-speech.
-            var inSpeech = firstQuote == '”' && quoteCount % 2 != 0;
-            foreach (var part in quotedParts)
-            {
-                pieces.Add((Speech: inSpeech, Text: part));
-                inSpeech = !inSpeech;
-            }
-        }
-        else if (msg.LogKind == XivChatType.CustomEmote || startsWithNarration)
-        {
-            pieces.Add((Speech: false, Text: text));
-        }
-        else
-        {
-            var previousEnd = 0;
-            foreach (Match action in actions)
-            {
-                pieces.Add((Speech: true, Text: text[previousEnd..action.Index]));
-                pieces.Add((Speech: false, Text: action.Groups["action"].Value));
-                previousEnd = action.Index + action.Length;
-            }
-            pieces.Add((Speech: true, Text: text[previousEnd..]));
-        }
-
-        var first = pieces.FirstOrDefault(p => !string.IsNullOrWhiteSpace(p.Text));
-        var style = msg.LogKind switch
-        {
-            XivChatType.CustomEmote => LineStyle.Emote,
-            XivChatType.Shout or XivChatType.Yell => LineStyle.Shout,
-            _ when isTell && ooc.Success => LineStyle.Ooc,
-            _ when isTell && (startsWithNarration || (first.Text != null && !first.Speech)) => LineStyle.Emote,
-            _ when !isTell && !hasQuotes && actions.Count == 0 => LineStyle.Ooc,
-            _ => LineStyle.Speech,
-        };
-        if (style == LineStyle.Ooc)
-        {
-            var body = ooc.Success ? ooc.Groups[1].Value.Trim() : text;
-            pieces.Clear();
-            pieces.Add((Speech: false, Text: body));
-        }
-        else
-        {
-            for (var i = 0; i < pieces.Count; i++)
-            {
-                var (speech, piece) = pieces[i];
-                piece = piece.Trim();
-                if (!speech)
-                    piece = piece.Trim('*').Trim();
-                pieces[i] = (speech, piece);
-            }
-            pieces.RemoveAll(piece => piece.Text == "");
-        }
+        var defaultKind = RpChannels.Convention(msg.LogKind, config);
+        if (isTell && RpFormatter.IsWrappedOoc(text))
+            defaultKind = RpTextKind.Ooc;
+        var startsWithNarration = !RpChannels.IsPublic(msg.LogKind) && StartsWithActor(text, authorName.TextValue);
+        if (startsWithNarration && defaultKind != RpTextKind.Ooc)
+            defaultKind = RpTextKind.Action;
+        var pieces = RpFormatter.Parse(text, defaultKind, config);
+        if (config.UnquotedSayIsOoc && RpChannels.IsSay(msg.LogKind) && pieces is [{ Speech: true } only] && only.Text == text)
+            pieces = [new(RpTextKind.Ooc, text)];
+        if (pieces.Count == 0)
+            return;
+        var isOwnMessage = RpChannels.IsOutgoingTell(msg.LogKind) || senderName.TextValue == localName;
+        var styledMessage = new StyledChatMessage(msg, pieces, speaker, isOwnMessage);
+        var actionLine = RpChannels.IsEmote(msg.LogKind) || (!isShout &&
+            ((!RpChannels.IsPublic(msg.LogKind) && (startsWithNarration || pieces[0].Kind == RpTextKind.Action)) ||
+             !styledMessage.HasSpeech));
+        var lineKind = styledMessage.IsOoc ? RpTextKind.Ooc : actionLine ? RpTextKind.Action : RpTextKind.Speech;
 
         var words = config.HighlightWords.Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries).ToList();
         if (config.HighlightCharacterName && !string.IsNullOrWhiteSpace(localName))
@@ -174,7 +125,8 @@ public sealed class ChatStyler : IDisposable
                 RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
         }
 
-        var line = BuildLine(pieces, style, isTell, authorName,
+        var includeActionAuthor = !isTell && !startsWithNarration;
+        var line = BuildLine(pieces, lineKind, includeActionAuthor, isShout, authorName,
             new ReadOnlySeString(prefix.ToArray()), fade, highlights);
         msg.PreventOriginal();
         chatGui.Print(new XivChatEntry
@@ -184,8 +136,7 @@ public sealed class ChatStyler : IDisposable
             Message = line,
         });
         // Queue the replacement before scheduling the native bubble for the next frame.
-        var isOwnMessage = msg.LogKind == XivChatType.TellOutgoing || senderName.TextValue == localName;
-        presentMessage(new StyledChatMessage(msg, pieces, style == LineStyle.Ooc, speaker, isOwnMessage));
+        presentMessage(styledMessage);
 
         if (config.PlayHighlightSound && !isOwnMessage && highlights != null &&
             pieces.Any(piece => highlights.IsMatch(piece.Text)))
@@ -193,12 +144,12 @@ public sealed class ChatStyler : IDisposable
     }
 
     // Render the style chosen by the caller using the same parsed text.
-    private static SeString BuildLine(IReadOnlyList<(bool Speech, string Text)> pieces, LineStyle style,
-        bool isTell, SeString authorName, ReadOnlySeString prefix, float fade, Regex? highlights)
+    private static SeString BuildLine(IReadOnlyList<RpTextSegment> pieces, RpTextKind lineKind,
+        bool includeActionAuthor, bool isShout, SeString authorName, ReadOnlySeString prefix, float fade, Regex? highlights)
     {
         var b = new LuminaSeStringBuilder();
         var sender = new ReadOnlySeString(authorName.Encode());
-        var isEmote = style == LineStyle.Emote;
+        var isEmote = lineKind == RpTextKind.Action;
         if (!prefix.IsEmpty)
         {
             PushColor(b, PrefixColor, 1f);
@@ -206,11 +157,11 @@ public sealed class ChatStyler : IDisposable
             b.PopColor();
         }
 
-        if (style == LineStyle.Ooc)
+        if (lineKind == RpTextKind.Ooc)
         {
             PushColor(b, OocColor, fade);
             b.Append("(( ").Append(sender).Append(": ");
-            AppendHighlighted(b, pieces[0].Text, highlights, fade);
+            AppendHighlighted(b, string.Join(" ", pieces.Select(p => p.Text)), highlights, fade);
             b.Append(" ))");
             b.PopColor();
             return SeString.Parse(b.ToArray());
@@ -220,22 +171,32 @@ public sealed class ChatStyler : IDisposable
         {
             PushColor(b, EmoteColor, fade);
             b.Append("* ");
-            if (!isTell)
+            if (includeActionAuthor)
                 b.Append(sender).Append(" ");
         }
         else
         {
             PushColor(b, SpeechColor, fade);
-            b.Append(sender).Append(style == LineStyle.Shout ? " shouts: " : " says: ");
+            b.Append(sender).Append(isShout ? " shouts: " : " says: ");
         }
 
         for (var index = 0; index < pieces.Count; index++)
         {
-            var (isSpeechPiece, piece) = pieces[index];
+            var segment = pieces[index];
+            var isSpeechPiece = segment.Speech;
+            var piece = segment.Text;
             if (index > 0)
                 b.Append(" ");
 
-            if (isEmote && isSpeechPiece)
+            if (segment.Kind == RpTextKind.Ooc)
+            {
+                PushColor(b, OocColor, fade);
+                b.Append("(( ");
+                AppendHighlighted(b, piece, highlights, fade);
+                b.Append(" ))");
+                b.PopColor();
+            }
+            else if (isEmote && isSpeechPiece)
             {
                 PushColor(b, SpeechColor, fade);
                 b.Append("\"");

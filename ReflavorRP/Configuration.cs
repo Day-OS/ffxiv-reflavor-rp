@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using Dalamud.Configuration;
+using Dalamud.Game.Text;
 
 namespace ReflavorRP;
 
@@ -19,6 +20,17 @@ public class Configuration : IPluginConfiguration
     public string VerbShout { get; set; } = "shouts";
     public string VerbLow { get; set; } = "whispers";
     public string VerbWhisper { get; set; } = "whispers to";
+
+    // Notation shared by outgoing conversion and incoming presentation.
+    public bool BracketsAreOoc { get; set; } = false;
+    public bool ParenthesesAreOoc { get; set; } = true;
+    public bool UnquotedSayIsOoc { get; set; } = false;
+    private XivChatType? alwaysOocChannel;
+    public XivChatType? AlwaysOocChannel
+    {
+        get => alwaysOocChannel;
+        set => alwaysOocChannel = value is { } channel && RpChannels.CanBeOocChannel(channel) ? channel : null;
+    }
 
     // incoming
     public bool StyleIncomingChat { get; set; } = true;
