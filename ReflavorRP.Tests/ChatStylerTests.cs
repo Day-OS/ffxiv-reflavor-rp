@@ -508,6 +508,27 @@ public class ChatStylerTests : IDisposable
         Assert.Same(playerName, message.Object.Sender);
     }
 
+    [Fact]
+    public void KeepsSenderNamesReplacedByOtherPlugins()
+    {
+        var sender = new Builder();
+        sender.PushLinkCharacter("Raih’li", 75);
+        sender.PushColorType(45);
+        sender.Append("Lady Raih");
+        sender.PopColorType();
+        sender.AppendIcon((uint)BitmapFontIcon.CrossWorld);
+        sender.Append("World");
+        sender.PopLink();
+        var playerName = SeString.Parse(sender.ToArray());
+
+        Receive(XivChatType.Say, "“Hi.”", playerName);
+
+        Assert.NotNull(printed);
+        Assert.Equal("Lady Raih says: Hi.", printed.Message.TextValue);
+        Assert.Contains(printed.Message.Payloads, p => p is UIForegroundPayload { ColorKey: 45 });
+        Assert.DoesNotContain(printed.Message.Payloads, p => p is IconPayload);
+    }
+
     [Theory]
     [InlineData(XivChatType.Shout)]
     [InlineData(XivChatType.Yell)]

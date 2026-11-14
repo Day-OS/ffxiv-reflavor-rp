@@ -268,17 +268,28 @@ public sealed class ChatStyler : IDisposable
         return false;
     }
 
-    // drops the world name but keeps the player link
+    // Drops the world name but keeps the player link and everything else in the sender,
+    // since name plugins (e.g. Character Select+) replace the shown name and color there.
     private static SeString WithoutWorld(SeString sender)
     {
-        var index = sender.Payloads.FindIndex(p => p is PlayerPayload);
-        if (index < 0)
+        var player = sender.Payloads.OfType<PlayerPayload>().FirstOrDefault();
+        if (player == null)
             return sender;
 
-        var player = (PlayerPayload)sender.Payloads[index];
-        var payloads = sender.Payloads.Take(index + 1).ToList();
-        payloads.Add(new TextPayload(player.PlayerName));
-        payloads.Add(RawPayload.LinkTerminator);
+        var payloads = new List<Payload>();
+        for (var i = 0; i < sender.Payloads.Count; i++)
+        {
+            var payload = sender.Payloads[i];
+            if (payload is IconPayload { Icon: BitmapFontIcon.CrossWorld })
+            {
+                if (i + 1 < sender.Payloads.Count && sender.Payloads[i + 1] is TextPayload)
+                    i++; // the world name
+                continue;
+            }
+            if (payload is TextPayload { Text: { } text } && text.StartsWith(player.PlayerName + "@", StringComparison.Ordinal))
+                payload = new TextPayload(player.PlayerName);
+            payloads.Add(payload);
+        }
         return new SeString(payloads);
     }
 
